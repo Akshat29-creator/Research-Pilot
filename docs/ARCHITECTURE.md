@@ -43,15 +43,20 @@ flowchart TD
 
     subgraph IntegrationLayer ["Integration & Infrastructure Layer"]
         LLMRegistry["LLM Provider Registry (Ollama Semaphore=1 / Cloud)"]
-        SearchRegistry["Search Provider Registry (Tavily / Brave / SearXNG)"]
+        SearchRegistry["Search Provider Registry (SearXNG Default / Tavily / Brave)"]
         PDFParser["PyMuPDF Document Parser"]
         Checkpointer["AsyncPostgresSaver"]
     end
 
-    subgraph DataLayer ["Data & Storage Layer"]
+    subgraph ContainerInfra ["Docker Compose Infrastructure"]
         Postgres[("PostgreSQL 16 + pgvector")]
         RedisDB[("Redis 7 (Queue & Cache)")]
-        HostOllama["Host Ollama (qwen3:8b & nomic-embed-text)"]
+        SearXNGContainer["SearXNG (Default Local Metasearch Engine)"]
+    end
+
+    subgraph HostRuntime ["Host Machine (Windows 11 / WSL2)"]
+        HostOllama["Host Ollama (qwen3:8b & nomic-embed-text)
+        Listening: 0.0.0.0:11434"]
     end
 
     UI -->|"HTTP REST"| Router
@@ -62,7 +67,8 @@ flowchart TD
     AgentLayer --> SearchRegistry
     AgentLayer --> Checkpointer
     Checkpointer --> Postgres
-    LLMRegistry -->|"HTTP localhost:11434"| HostOllama
+    LLMRegistry -->|"HTTP host.docker.internal:11434"| HostOllama
+    SearchRegistry -->|"HTTP searxng:8080"| SearXNGContainer
     RetrievalSvc --> Postgres
     IngestSvc --> PDFParser
     ServiceLayer --> RedisDB
@@ -83,7 +89,7 @@ flowchart TD
 - **Framework**: Async FastAPI with ASGI server (Uvicorn).
 - **Endpoint Structure**:
   - `/api/v1/health`: Liveness probe (HTTP 200).
-  - `/api/v1/ready`: Readiness probe verifying PostgreSQL, Redis, and host Ollama connectivity.
+  - `/api/v1/ready`: Readiness probe verifying PostgreSQL, Redis, and host Ollama connectivity. Emits `"degraded"` status if VRAM headroom is constrained or layers are offloaded to CPU.
   - `/api/v1/auth`: User registration, login, token refresh (`/me`).
   - `/api/v1/research`: Create, list, retrieve, and cancel research workflows.
   - `/api/v1/documents`: Upload, parse, chunk, and embed PDFs or text documents.
@@ -102,7 +108,7 @@ flowchart TD
 
 ### 3.4 Multi-Agent Workflow Engine (`backend/app/workflows/`)
 - **State Machine**: Powered by LangGraph `StateGraph` with typed state dictionaries.
-- **Execution Lifecycle**:
+- **Execution Sequence**:
   ```mermaid
   sequenceDiagram
       autonumber
@@ -117,7 +123,7 @@ flowchart TD
       User->>Orch: Submit Research Query
       Orch->>DB: Save Initial State Checkpoint
       Orch->>Res: Decomposed Sub-queries
-      Res->>Res: Search Web & Query pgvector
+      Res->>Res: Query SearXNG & pgvector
       Res->>DB: Checkpoint Sources & Evidence
       Res->>Ana: Raw Evidence Excerpts
       Ana->>Ana: Synthesize, Resolve Contradictions & Identify Gaps
@@ -150,10 +156,26 @@ flowchart TD
 | **KV Cache (4096 tokens)** | ~0.8 GB | Bounded context budget prevents VRAM swapping to host RAM. |
 | **Embedding Engine** | ~274 MB | `nomic-embed-text` runs on host Ollama during ingestion. |
 | **Concurrency Ceiling** | `Semaphore(1)` | Guarantees zero overlapping LLM inferences. |
+| **In-Container VRAM Telemetry**| `/api/ps` probe | Polls Ollama's `GET /api/ps` to check `size_vram` vs `size` without requiring `nvidia-smi` inside Docker. |
+| **Readiness Degradation** | `VRAM_WARN_THRESHOLD_MB` | Returns status `"degraded"` if free headroom is < 5500 MB (default). |
 
 ---
 
-## 5. Security & Isolation Model
+## 5. Host & Networking Configuration
+1. **Container-to-Host Routing**: Backend communicates with host Ollama via `http://host.docker.internal:11434`.
+2. **Docker Compose Gateway**: Configured with `extra_hosts: ["host.docker.internal:host-gateway"]`.
+3. **Host Ollama Binding**: Ollama daemon on host must be configured with `OLLAMA_HOST=0.0.0.0` to accept connections from the Docker bridge network. Refer to [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for firewall hardening.
+
+---
+
+## 6. Search Provider Architecture
+1. **Default Provider**: Local containerized **SearXNG** instance (`SEARCH_PROVIDER=searxng`), requiring zero paid API keys or external subscriptions.
+2. **Optional External Providers**: Tavily (`SEARCH_PROVIDER=tavily`) and Brave (`SEARCH_PROVIDER=brave`) supported seamlessly via the `SearchProvider` interface when API keys are supplied.
+3. **Operational Caveats**: Refer to [docs/RESEARCH_AGENT.md](docs/RESEARCH_AGENT.md) for details on SearXNG upstream engine rate limits and failover policies.
+
+---
+
+## 7. Security & Isolation Model
 1. **Untrusted Data Boundary**: All external text fetched from web search or PDFs is treated as untrusted and wrapped in XML delimiters (`<untrusted_source_document>`).
 2. **SSRF Guardrail**: Outbound HTTP requests validate resolved IP addresses, blocking private CIDRs (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.0/8`, `169.254.0.0/16`).
 3. **Multi-Tenant Isolation**: Every database table includes `user_id` foreign keys; repositories filter strictly by authenticated identity.
