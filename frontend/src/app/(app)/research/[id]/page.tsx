@@ -196,6 +196,17 @@ export default function ResearchWorkspacePage() {
             </Button>
           )}
 
+          <Link href={`/research/${sessionId}/trace`}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-[11px] font-mono gap-1.5 text-muted-foreground hover:text-foreground"
+            >
+              <Layers className="h-3 w-3 text-primary" />
+              <span>Agent Trace</span>
+            </Button>
+          </Link>
+
           <Button
             variant="outline"
             size="sm"
