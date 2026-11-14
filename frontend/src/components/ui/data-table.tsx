@@ -22,7 +22,7 @@ export interface DataTableProps<T> {
   className?: string;
 }
 
-export function DataTable<T extends Record<string, unknown>>({
+export function DataTable<T>({
   columns,
   data,
   keyExtractor,
@@ -49,8 +49,8 @@ export function DataTable<T extends Record<string, unknown>>({
   const sortedData = React.useMemo(() => {
     if (!sortKey) return data;
     return [...data].sort((a, b) => {
-      const valA = a[sortKey];
-      const valB = b[sortKey];
+      const valA = (a as Record<string, unknown>)[sortKey];
+      const valB = (b as Record<string, unknown>)[sortKey];
       if (valA === valB) return 0;
       if (valA === undefined || valA === null) return 1;
       if (valB === undefined || valB === null) return -1;
@@ -124,7 +124,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         col.className
                       )}
                     >
-                      {col.render ? col.render(row) : (row[col.key] as React.ReactNode)}
+                      {col.render ? col.render(row) : ((row as Record<string, unknown>)[col.key] as React.ReactNode)}
                     </td>
                   ))}
                 </tr>

@@ -5,7 +5,7 @@ This document tracks all project milestones, completed tasks, implemented featur
 ---
 
 ## Current Status Overview
-- **Active Track**: Frontend Redesign (Premium SaaS Interface) — Stage 4 Screen 1 (Landing Page) Completed, Ready for Screen 2 (Dashboard)
+- **Active Track**: Frontend Redesign (Premium SaaS Interface) — Stage 4 Screen 2 (Dashboard) Completed, Ready for Screen 3 (Research Workspace)
 - **Repository**: `https://github.com/Akshat29-creator/Research-Pilot.git`
 - **Branch**: `main`
 - **Target Hardware**: Lenovo Legion Pro 5 | AMD Ryzen 7 8745HX | RTX 5060 Laptop GPU (8GB VRAM) | Windows 11 + WSL2
@@ -129,6 +129,16 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Verified strict TypeScript compilation with zero errors (`tsc --noEmit`).
     - Captured high-fidelity desktop (1440px) and mobile (390px) screenshots saved in `docs/screenshots/landing-redesign-*.png`.
     - Created Stage 4 Screen 1 review artifact `stage_4_screen_1_landing_review.md`.
+  - **Stage 4: Screen 2 — Dashboard Redesign (Completed)**:
+    - Redesigned `frontend/src/app/(app)/dashboard/page.tsx` as a high-density research operations cockpit.
+    - Implemented real-time GPU health card with color-coded VRAM progress gauge, free headroom monitor, and local Ollama model states.
+    - Added quick-start research dispatch input with prefilling from landing page `?q=...` parameters and 1-click starter chips.
+    - Added cumulative workspace metrics card (Dossiers compiled, sources ingested, average grounding score, $0.00 cloud cost).
+    - Built sortable recent sessions `DataTable` with status dots, execution timings in `tabular-nums`, and verification badges.
+    - Implemented polished `EmptyState` for new workspaces with suggested prompts and sample session view toggle.
+    - Verified strict TypeScript compilation with zero errors (`tsc --noEmit`).
+    - Captured high-fidelity desktop (1440px) and mobile (390px) screenshots saved in `docs/screenshots/dashboard-redesign-*.png`.
+    - Created Stage 4 Screen 2 review artifact `stage_4_screen_2_dashboard_review.md`.
 
 ---
 
