@@ -5,7 +5,7 @@ This document tracks all project milestones, completed tasks, implemented featur
 ---
 
 ## Current Status Overview
-- **Active Phase**: Phase 1 Completed (Foundation) -> Awaiting User Approval to start Phase 2 (LLM Infrastructure)
+- **Active Track**: Frontend Redesign (Premium SaaS Interface) — Stage 1 Completed, Awaiting User Approval to start Stage 2
 - **Repository**: `https://github.com/Akshat29-creator/Research-Pilot.git`
 - **Branch**: `main`
 - **Target Hardware**: Lenovo Legion Pro 5 | AMD Ryzen 7 8745HX | RTX 5060 Laptop GPU (8GB VRAM) | Windows 11 + WSL2
@@ -81,6 +81,22 @@ This document tracks all project milestones, completed tasks, implemented featur
   - Refactored `httpx.AsyncClient` test mocks to selectively intercept Ollama port 11434 without colliding with test client transport.
   - Fixed Starlette `add_exception_handler` type compatibility in `app/core/errors.py`.
   - Cleaned all Ruff linting errors and achieved 100% clean Mypy type-checking across 23 source files.
+
+### Frontend Redesign: Premium SaaS Interface (In Progress)
+- **Status**: `STAGE 1 COMPLETED (AWAITING USER APPROVAL FOR STAGE 2)`
+- **Timestamp**: 2026-11-14
+- **What Was Done**:
+  - **Stage 1: Audit and Design Direction (Zero Code Changes)**:
+    - Executed live headless browser audit capturing full-page desktop (1440px) and mobile (390px) screenshots across all routes (`/`, `/login`, `/register`, `/dashboard`) saved in `docs/screenshots/audit/`.
+    - Documented concrete UX issues across spacing, typography, color/contrast, information hierarchy, alignment, empty/loading/error states, mobile responsiveness, and WCAG AA accessibility.
+    - Authored `docs/DESIGN_SYSTEM.md` establishing the design philosophy (calm, precise research workstation inspired by Linear, Vercel, Perplexity, Raycast, and Arc).
+    - Defined semantic CSS variable tokens for **both Dark and Light themes** with verified WCAG AA contrast compliance (`--bg-app`, `--bg-surface`, `--bg-surface-raised`, `--border-subtle`, `--border-strong`, `--text-primary`, `--text-secondary`, `--text-muted`, `--accent`).
+    - Standardized Geist Sans / Inter for UI typography, Geist Mono / JetBrains Mono for telemetry/timings/citations, `tabular-nums` for numeric telemetry, and a strict 4px spacing grid.
+    - Integrated user architectural directive: **Cloud-First Low-Cost Ollama Model Tiering** with automatic fallback to local RTX 5060 Ollama (`qwen3:8b` + `nomic-embed-text`) upon quota exhaustion.
+    - Created rich visual preview artifact `stage_1_design_system_preview.md` containing carousel audit comparisons, token matrices, and ASCII/markdown visual mockups of 3 signature components:
+      1. *LangGraph Live Agent Node* (elapsed timings, tool calls, token metrics).
+      2. *Verified Source Card & Citation Chip* (grounded text excerpts, page offsets, hash attribution).
+      3. *Inference Routing Card* (dual-tier cloud-to-local fallback toggles and VRAM/credit indicators).
 
 ---
 
