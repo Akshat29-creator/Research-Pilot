@@ -92,11 +92,11 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Authored `docs/DESIGN_SYSTEM.md` establishing the design philosophy (calm, precise research workstation inspired by Linear, Vercel, Perplexity, Raycast, and Arc).
     - Defined semantic CSS variable tokens for **both Dark and Light themes** with verified WCAG AA contrast compliance (`--bg-app`, `--bg-surface`, `--bg-surface-raised`, `--border-subtle`, `--border-strong`, `--text-primary`, `--text-secondary`, `--text-muted`, `--accent`).
     - Standardized Geist Sans / Inter for UI typography, Geist Mono / JetBrains Mono for telemetry/timings/citations, `tabular-nums` for numeric telemetry, and a strict 4px spacing grid.
-    - Integrated user architectural directive: **Cloud-First Low-Cost Ollama Model Tiering** with automatic fallback to local RTX 5060 Ollama (`qwen3:8b` + `nomic-embed-text`) upon quota exhaustion.
+    - Refined inference architecture per user instruction: **100% Free & Local-First on RTX 5060 Laptop GPU** (completely discarding cloud LLM models to eliminate all external costs and maintain air-gapped privacy).
     - Created rich visual preview artifact `stage_1_design_system_preview.md` containing carousel audit comparisons, token matrices, and ASCII/markdown visual mockups of 3 signature components:
       1. *LangGraph Live Agent Node* (elapsed timings, tool calls, token metrics).
       2. *Verified Source Card & Citation Chip* (grounded text excerpts, page offsets, hash attribution).
-      3. *Inference Routing Card* (dual-tier cloud-to-local fallback toggles and VRAM/credit indicators).
+      3. *Local Hardware & GPU Telemetry Card* (live VRAM gauge via Ollama `/api/ps`, context window budget, and semaphore concurrency status).
 
 ---
 

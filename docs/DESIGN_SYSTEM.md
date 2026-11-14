@@ -179,9 +179,9 @@ All paddings, margins, gaps, and dimensions align strictly to multiples of 4px:
 
 ---
 
-## 6. Tiered LLM Provider Architecture: Cloud-First with Local RTX 5060 Fallback
+## 6. Local-First Inference Architecture (100% Free & Private on RTX 5060)
 
-Per user specification, ResearchPilot AI implements a **tiered dual-mode inference architecture**:
+ResearchPilot AI is strictly **100% local, free, and private**. Inference runs entirely on your local NVIDIA RTX 5060 Laptop GPU (8GB VRAM) with zero cloud dependencies, zero recurring subscription costs, and complete air-gapped data privacy.
 
 ```
 +--------------------------------------------------------------------------+
@@ -190,33 +190,33 @@ Per user specification, ResearchPilot AI implements a **tiered dual-mode inferen
                                      |
                                      v
                   +--------------------------------------+
-                  |   TIER 1: HIGH-SPEED CLOUD OLLAMA    |
-                  |   - Low-cost, high-throughput cloud  |
-                  |     compatible models                |
-                  |   - Latency: < 400ms TTFT            |
-                  |   - Zero local VRAM burden           |
-                  +--------------------------------------+
-                                     |
-                   Quota Exceeded / Network Drop / Offline?
-                                     |
-                                     v [Automatic Seamless Fallback]
-                  +--------------------------------------+
-                  |   TIER 2: LOCAL NVIDIA RTX 5060      |
+                  |   LOCAL OLLAMA INFERENCE ENGINE      |
+                  |   - 100% Free & Offline              |
                   |   - Model: Qwen3:8B (Q4_K_M, 5.2GB)  |
                   |   - Embeddings: nomic-embed-text     |
+                  |     (768 dims, 274MB)                |
+                  |   - VRAM Budget: 5.5GB / 8.1GB Usable|
                   |   - Concurrency Semaphore = 1        |
-                  |   - 100% Offline, Zero Cloud Cost    |
+                  +--------------------------------------+
+                                     |
+                                     v
+                  +--------------------------------------+
+                  |   LOCAL HARDWARE TELEMETRY           |
+                  |   - VRAM Monitored via Ollama /api/ps|
+                  |   - Degraded / Warning if VRAM < 5.5G|
+                  |   - Context Window Capped: 4096 tok  |
                   +--------------------------------------+
 ```
 
 ### UX Implementation:
-1. **Model Switcher & Quota Indicator**: In the top navigation and research workspace, a persistent micro-pill shows:
-   - `CLOUD (FAST)` with active quota indicator and ping latency.
-   - `LOCAL (RTX 5060)` when running in local-only or fallback mode.
-2. **Auto-Fallback Banner**: If cloud credits expire or the API rate-limits mid-session, the workspace seamlessly routes remaining agent iterations to local Ollama with a non-intrusive toast: *"Cloud quota reached. Seamlessly switched to local Qwen3:8B on RTX 5060."*
+1. **GPU & Model Status Indicator**: In the top navigation and research workspace, a persistent micro-pill shows:
+   - `RTX 5060 • QWEN3:8B` with live VRAM usage from `/api/v1/ready`.
+   - Green dot indicates normal operation; amber indicates VRAM warning (`degraded` mode).
+2. **Context Window & Memory Safety Meter**: The interface shows real-time context token usage against the safe 4,096-token ceiling.
 3. **Settings Controls**: User can configure:
-   - Inference Preference: `Cloud First (Fastest)`, `Local Only (Air-Gapped)`, `Cloud Only`.
-   - Max Cloud Spend Threshold ($/month or token ceiling).
+   - Primary reasoning model (default: `qwen3:8b`).
+   - Context length (`num_ctx`, default: 4096, max: 8192 with warning).
+   - VRAM warning threshold (default: 5500 MB).
 
 ---
 
@@ -230,7 +230,7 @@ Per user specification, ResearchPilot AI implements a **tiered dual-mode inferen
 |  Status: Ingesting web sources (4/5)                             |
 |  ............................................................... |
 |  Tool: SearXNG metasearch | Query: "pgvector hnsw m=16 ef=64"    |
-|  Memory: 412 tokens       | Model: Cloud Qwen2.5-Coder (Fast)    |
+|  Memory: 412 tokens       | Model: Local Qwen3:8B (Q4_K_M)       |
 +------------------------------------------------------------------+
 ```
 - **Structure**: 1px subtle zinc border, dark surface background (`#121215`), emerald left status indicator (or pulsing dot while running).
@@ -258,22 +258,22 @@ memory footprint during index building [1]."
 - **Inline Citation Chip**: `[1]` rendered as a compact pill button (`bg-surface-raised border border-subtle text-accent text-xs font-mono px-1.5 py-0.5 rounded`).
 - **Popover & Drawer Card**: Displays the exact verbatim excerpt verified by the Reviewer Agent, page offset, source hash, and domain favicon.
 
-### Component 3: Model Selector & Tiered Fallback Configuration Card
+### Component 3: Local Hardware & GPU Telemetry Card
 
 ```
 +------------------------------------------------------------------+
-|  INFERENCE ENGINE & MODEL ROUTING                                |
+|  LOCAL INFERENCE HARDWARE & VRAM TELEMETRY                       |
 +------------------------------------------------------------------+
-|  (o) Tier 1: Ollama Cloud (Fast & Low Cost)                      |
-|      Default for rapid agent drafting and literature search.     |
-|      Active Model: qwen2.5:7b-fast      Status: Connected (32ms) |
+|  [v] NVIDIA GeForce RTX 5060 Laptop GPU (8,151 MiB Total)        |
+|      VRAM Allocated: 5,474 MiB (67%)      Free Headroom: 2,677 MiB|
+|      ========================[==========] 67%                     |
 |                                                                  |
-|  [x] Auto-Fallback to Local RTX 5060 when cloud quota expires    |
-|      Local Model: qwen3:8b (Q4_K_M)     VRAM: 5.2GB / 8.1GB      |
-|      Embeddings: nomic-embed-text (Local, 274MB)                 |
+|  Active Model: qwen3:8b (Q4_K_M, 5.2GB)    Status: In Memory     |
+|  Embedding: nomic-embed-text (274MB)       Status: In Memory     |
+|  Context Window: 4,096 tokens (Safe)       Concurrency: 1 (Sem)  |
 +------------------------------------------------------------------+
 ```
-- **Structure**: Radio / switch group with clear tier distinctions, real-time VRAM meter from backend `/ready` endpoint, and cloud latency badge.
+- **Structure**: High-density hardware telemetry card consuming real data from the backend `/api/v1/ready` and Ollama `/api/ps` endpoints. Includes visual VRAM progress bar with color-coded safety thresholds (green < 75%, amber 75-90%, red > 90%).
 
 ---
 
