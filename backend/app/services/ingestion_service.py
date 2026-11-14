@@ -100,9 +100,7 @@ async def ingest_document(
         )
     else:
         text_str = (
-            content
-            if isinstance(content, str)
-            else content.decode("utf-8", errors="replace")
+            content if isinstance(content, str) else content.decode("utf-8", errors="replace")
         )
         raw_chunks = chunk_text(
             text=text_str,

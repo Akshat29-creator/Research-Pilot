@@ -3,7 +3,7 @@ import uuid
 import pytest
 from sqlalchemy import select
 
-from app.database.session import async_session_factory
+from app.database.session import async_session_factory, engine
 from app.models.user import User
 from app.services.citation_service import (
     VerificationStatus,
@@ -151,3 +151,4 @@ async def test_live_pgvector_rag_pipeline():
             if u2:
                 await db.delete(u2)
             await db.commit()
+    await engine.dispose()

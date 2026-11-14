@@ -132,8 +132,7 @@ def verify_claim_against_chunks(
     else:
         status = VerificationStatus.UNVERIFIED
         reason = (
-            f"Insufficient textual evidence (coverage {best_score:.2f} < "
-            f"{min_pass_score:.2f})."
+            f"Insufficient textual evidence (coverage {best_score:.2f} < {min_pass_score:.2f})."
         )
 
     return CitationVerification(

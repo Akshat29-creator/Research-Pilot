@@ -1,9 +1,12 @@
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import DateTime, ForeignKey, Integer, Text, Uuid
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.schema import FetchedValue
 
 from app.database.base import Base
 
@@ -23,6 +26,11 @@ class DocumentChunk(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     embedding: Mapped[list[float]] = mapped_column(Vector(768), nullable=False)
     token_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_tsvector: Mapped[Any] = mapped_column(
+        TSVECTOR().with_variant(Text(), "sqlite"),
+        server_default=FetchedValue(),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

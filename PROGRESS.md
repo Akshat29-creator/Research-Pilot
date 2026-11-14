@@ -344,6 +344,36 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Total backend test suite: **99 / 99 tests passed in 22.02s**.
     - Ruff and Mypy passing with **zero errors and zero warnings** across all 61 source files.
 
+### Phase 5B: Hybrid Search and Reranking (Completed)
+- **Status**: `COMPLETED`
+- **Timestamp**: 2026-11-15
+- **What Was Done**:
+  - **PostgreSQL Full-Text Search Schema (`backend/alembic/versions/002_hybrid_search.py`)**:
+    - Created migration `002_hybrid_search` adding `content_tsvector` as a `STORED` generated column (`to_tsvector('english', content)`).
+    - Created generalized inverted index `idx_document_chunks_content_tsvector_gin` for sub-millisecond keyword retrieval.
+    - Updated `DocumentChunk` model with `FetchedValue()` and SQLite variant to maintain 100% compatibility across test engines and PostgreSQL.
+  - **Full-Text Retrieval Service (`backend/app/services/hybrid_search_service.py`)**:
+    - Built `full_text_search()` using `websearch_to_tsquery('english', :query)` and `ts_rank()` to safely evaluate natural language keyword searches without syntax errors.
+    - Preserved tenant boundaries via `WHERE Document.user_id == user_id`.
+  - **Reciprocal Rank Fusion (RRF) Engine (`backend/app/services/hybrid_search_service.py`)**:
+    - Implemented `reciprocal_rank_fusion()` using the standard formula $\text{RRF Score}(d) = \sum_{m} \frac{1}{k + \text{rank}_m(d) + 1}$ ($k=60$).
+    - Boosts documents present across both vector similarity and keyword matches.
+  - **VRAM-Safe CPU Reranking Pass (`backend/app/services/hybrid_search_service.py`)**:
+    - Built `apply_vram_safe_reranking()` evaluating exact phrase containment, query term proximity, and coverage ratios on host CPU without allocating GPU memory, protecting the 8GB VRAM headroom on the RTX 5060 Laptop GPU.
+    - Configured `hybrid_search()` orchestrating vector retrieval, full-text retrieval, RRF fusion, and optional reranking.
+  - **Empirical Retrieval Benchmarks (`backend/scripts/benchmark_retrieval.py`, `docs/HYBRID_SEARCH.md`)**:
+    - Executed live benchmark across 10 evaluation queries and 5 technical corpus documents:
+      - Vector Only (pgvector HNSW): P@1: 100.0%, R@5: 100.0%, Latency: 1263.0ms (cold embed).
+      - Text Only (PostgreSQL tsvector/GIN): P@1: 50.0%, R@5: 50.0%, Latency: 1.6ms.
+      - Hybrid Search (RRF k=60): P@1: 100.0%, R@5: 100.0%, Latency: 167.2ms.
+      - Hybrid Search + Reranking: P@1: 100.0%, R@5: 100.0%, Latency: 180.7ms (only +13.5ms on CPU).
+    - Authored comprehensive documentation in `docs/HYBRID_SEARCH.md`.
+  - **Testing & Verification**:
+    - 4 unit tests in `test_hybrid_search.py` verifying RRF formula weights, overlapping boosts, phrase bonuses, and empty query handling.
+    - 1 live integration test in `test_hybrid_search_live.py` verifying GIN index text matching, HNSW vector search, RRF fusion ranking, reranking, and tenant isolation.
+    - Total backend test suite: **104 / 104 tests passed in 17.48s**.
+    - Ruff and Mypy passing with **zero errors and zero warnings** across all 63 source files.
+
 ---
 
 ## Roadmap & Next Phases
@@ -357,8 +387,8 @@ This document tracks all project milestones, completed tasks, implemented featur
 | **Phase 3** | Research Agent (Search Provider, PyMuPDF, SSRF Defense) | **COMPLETED** |
 | **Phase 4** | Multi-Agent Orchestration (LangGraph, State Machine, Review Loop) | **COMPLETED** |
 | **Phase 5** | RAG and Memory (pgvector, HNSW, Ingestion, Citation Verification) | **COMPLETED** |
-| **Phase 5B**| Hybrid Search and Reranking (tsvector + pgvector via RRF) | NEXT UP |
-| **Phase 6** | MCP, Approvals, Resilience (Interrupts, Checkpointer Recovery) | PENDING |
+| **Phase 5B**| Hybrid Search and Reranking (tsvector + pgvector via RRF) | **COMPLETED** |
+| **Phase 6** | MCP, Approvals, Resilience (Interrupts, Checkpointer Recovery) | NEXT UP |
 | **Phase 7** | Frontend (Next.js App Router, SSE Stream, Dark SaaS UI) | PENDING |
 | **Phase 8** | Evaluation and Observability (OpenTelemetry, Prometheus, Grafana) | PENDING |
 | **Phase 9** | CI/CD and Production Docker (GitHub Actions, Multi-Stage Builds) | PENDING |
