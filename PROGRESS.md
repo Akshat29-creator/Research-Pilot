@@ -5,7 +5,7 @@ This document tracks all project milestones, completed tasks, implemented featur
 ---
 
 ## Current Status Overview
-- **Active Phase**: Prompt 0 Completed (Bootstrap) -> Ready for Phase 0 (System Analysis & Architecture)
+- **Active Phase**: Phase 0 Completed (System Analysis & Architecture) -> Awaiting User Approval to start Phase 1 (Foundation)
 - **Repository**: `https://github.com/Akshat29-creator/Research-Pilot.git`
 - **Branch**: `main`
 - **Target Hardware**: Lenovo Legion Pro 5 | AMD Ryzen 7 8745HX | RTX 5060 Laptop GPU (8GB VRAM) | Windows 11 + WSL2
@@ -18,36 +18,43 @@ This document tracks all project milestones, completed tasks, implemented featur
 - **Status**: `COMPLETED`
 - **Timestamp**: 2026-11-14
 - **What Was Done**:
-  - Established `.agent/rules/` for strict project governance:
-    - `project-rules.md`: Strict single-phase gate discipline, zero mock facades in production paths, conventional commits, no silent error swallowing.
-    - `hardware.md`: Resource profiling for RTX 5060 (8GB VRAM), single model in memory, `asyncio.Semaphore(1)` concurrency limit, 4096-token context limit, sequential agent execution.
-    - `security.md`: Secrets management, untrusted source wrapping (`<untrusted_source_document>`), anti-hallucination citation verification, SSRF blocking, multi-tenant per-user data ownership.
-  - Authored 14 specialized skills in `.agent/skills/`:
-    - `fastapi-backend`: Async FastAPI, layered architecture, Pydantic v2, SQLAlchemy 2 async, Alembic.
-    - `ollama-llm-provider`: `LLMProvider` abstraction, local Ollama integration, structured JSON validation, 1-attempt repair retry, thinking tag handling.
-    - `langgraph-orchestration`: Typed state graph, sequential nodes, bounded review loop (max 3), `AsyncPostgresSaver` checkpointing, human interrupts.
-    - `rag-pgvector`: Ingestion pipeline, semantic chunking, `nomic-embed-text` (768 dims), pgvector HNSW index, citation span matching.
-    - `research-agent-tools`: Authorized search APIs (Tavily/Brave/SearXNG), SSRF defense, readability extraction, PyMuPDF parsing, deduplication.
-    - `nextjs-frontend`: Next.js App Router, strict TypeScript, Tailwind CSS, shadcn/ui, SSE streaming hook.
-    - `agent-evaluation`: Evaluation dataset, faithfulness, citation coverage, adversarial injection tests, empirical metrics.
-    - `security-review`: OWASP Top 10 for LLMs, prompt injection hardening, tenant isolation audits, dependency audits.
-    - `docs-and-portfolio`: ADR templates, Mermaid diagrams, verified Google X-Y-Z resume metrics, demo script, interview Q&A.
-    - `devops-cicd`: GitHub Actions pipelines, multi-stage non-root Dockerfiles, Trivy scans, Dependabot, pre-commit hooks.
-    - `observability-otel`: OpenTelemetry distributed tracing, Prometheus metrics exporter, Grafana dashboards as code.
-    - `testing-e2e-load`: Playwright E2E suites, API contract testing, Locust/k6 queue behavior load testing under single-LLM semaphore.
-    - `hybrid-search-rerank`: PostgreSQL full-text search (`tsvector` + GIN) combined with pgvector via RRF, VRAM-safe reranking.
-    - `mcp-server`: Model Context Protocol server exposing `start_research`, `get_report`, and `search_my_documents`.
-  - Created 6 standardized slash workflows in `.agent/workflows/`:
-    - `phase-gate.md`: Rigorous phase verification gate with empirical evidence matrix.
-    - `code-review.md`: Principal engineer code quality, security, and concurrency audit.
-    - `ui-audit.md`: Multi-viewport browser visual and functional audit.
-    - `agent-reliability-audit.md`: Adversarial and resilience stress testing.
-    - `release-check.md`: Clean-slate container deployment, end-to-end research run, export validation.
-    - `benchmark.md`: Automated quantitative benchmark run documenting empirical numbers to disk.
+  - Established `.agent/rules/` for strict project governance (`project-rules.md`, `hardware.md`, `security.md`).
+  - Authored 14 specialized engineering skills in `.agent/skills/`.
+  - Created 6 standardized slash workflows in `.agent/workflows/` (`phase-gate`, `code-review`, `ui-audit`, `agent-reliability-audit`, `release-check`, `benchmark`).
+  - Initialized git repository, linked remote `https://github.com/Akshat29-creator/Research-Pilot.git`, and pushed `main`.
 - **Fixes & Hardening Applied**:
-  - Enforced strict 1-retry bound on structured JSON parsing to eliminate infinite repair loops.
-  - Enforced SSRF IP range blocking in tool definitions to prevent intranet port scanning.
-  - Constrained local LLM execution via global async semaphore to protect 8GB VRAM against OOM thrashing.
+  - Bound structured JSON repair to 1 retry max.
+  - Implemented SSRF private IP validation rule.
+  - Added global concurrency limit rule (`asyncio.Semaphore(1)`).
+
+### Phase 0: System Analysis & Architecture (Completed)
+- **Status**: `COMPLETED (AWAITING APPROVAL)`
+- **Timestamp**: 2026-11-14
+- **What Was Done**:
+  - **Task 1: Environment & Hardware Audit**:
+    - OS: Windows 11 Home 64-bit (Build 26300), WSL2 active with Ubuntu 20.04 and Docker Desktop.
+    - Compute: AMD Ryzen 7 8745HX (16 threads), 32 GB RAM (16 GB available).
+    - GPU: NVIDIA GeForce RTX 5060 Laptop GPU (8151 MiB VRAM total, Driver 621.14, CUDA 13.5).
+    - VRAM Headroom: 1917 MiB used by Windows display/apps, leaving ~6234 MiB (~6.1 GB) usable VRAM.
+    - Runtimes: Python 3.11.9, Node.js v24.14.0, npm 11.9.0, Docker 29.3.1, Docker Compose v5.1.0.
+    - Disk: Drive D: 297 GB free, Drive C: 449 GB free.
+  - **Task 2: Model Selection**:
+    - Primary Reasoning Model: `qwen3:8b` / `qwen3:8b-q4_K_M` (5.2 GB size, fits within ~6.1 GB VRAM with 0.8 GB KV cache headroom at 4096 tokens).
+    - Embedding Model: `nomic-embed-text:latest` (274 MB size, 768 dimensions, 8192 context window).
+    - Handling Qwen3 `<think>` tags: Designed text sanitizer to strip thinking tokens prior to Pydantic JSON schema deserialization.
+  - **Task 3 & 4: Architectural Deliverables Authored**:
+    - `docs/ARCHITECTURE.md`: Complete system topology, component interactions, sequence diagram, and security boundaries.
+    - `docs/TECH_STACK.md`: Full technology specifications and version pin mappings.
+    - `docs/DATABASE_DESIGN.md`: Entity-relationship (ER) diagram, schema definitions for all 8 tables, HNSW and GIN index specifications.
+    - `docs/DEVELOPMENT_ROADMAP.md`: Phased execution roadmap from Phase 0 to Phase 11.
+    - `docs/ADR/ADR-001-langgraph-orchestration.md`: Rationale for state graphs, bounded loops, and Postgres checkpointing.
+    - `docs/ADR/ADR-002-postgres-pgvector-unified-storage.md`: Unified ACID storage for relational, checkpoint, and vector data.
+    - `docs/ADR/ADR-003-hardware-concurrency-and-vram-budget.md`: Single semaphore throttling and 4K token budgeting.
+    - `docs/ADR/ADR-004-citation-grounding-and-anti-hallucination.md`: Multi-agent review loop with substring citation verification.
+    - `docs/ADR/ADR-005-local-first-ollama-with-cloud-fallback.md`: Privacy-preserving Ollama integration with optional cloud support.
+- **Fixes & Hardening Applied**:
+  - Eliminated high-risk 9B model (`qwen3.5:9b`, 6.6 GB) from primary selection to avoid GPU VRAM thrashing and PCIe swap penalties.
+  - Unified relational, state checkpointer, and vector storage into PostgreSQL 16 to eliminate distributed state desynchronization.
 
 ---
 
@@ -56,8 +63,8 @@ This document tracks all project milestones, completed tasks, implemented featur
 | Phase | Description | Status |
 |---|---|---|
 | **Prompt 0** | Bootstrap (Rules, Skills, Workflows) | **COMPLETED** |
-| **Phase 0** | System Analysis, Hardware Audit & Architecture | **PENDING APPROVAL** |
-| **Phase 1** | Foundation (FastAPI Skeleton, Next.js Shell, Docker Compose) | PENDING |
+| **Phase 0** | System Analysis, Hardware Audit & Architecture | **COMPLETED (AWAITING APPROVAL)** |
+| **Phase 1** | Foundation (FastAPI Skeleton, Next.js Shell, Docker Compose) | NEXT UP |
 | **Phase 2** | LLM Infrastructure (Ollama Provider, Structured JSON, Semaphore) | PENDING |
 | **Phase 3** | Research Agent (Search Provider, PyMuPDF, SSRF Defense) | PENDING |
 | **Phase 4** | Multi-Agent Orchestration (LangGraph, State Machine, Review Loop) | PENDING |
