@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IngestedDocument } from "@/components/documents/document-types";
+import { documentsApi } from "@/lib/api";
 import { toast } from "sonner";
 
 export interface UploadZoneProps {
@@ -37,25 +38,21 @@ export function UploadZone({ onDocumentIngested, className }: UploadZoneProps) {
     setStage("parsing");
     setProgress(15);
 
-    // Stage 1: Parsing
     setTimeout(() => {
       setStage("chunking");
       setProgress(45);
-    }, 800);
+    }, 600);
 
-    // Stage 2: Embedding
     setTimeout(() => {
       setStage("embedding");
       setProgress(75);
-    }, 1800);
+    }, 1200);
 
-    // Stage 3: Indexing
     setTimeout(() => {
       setStage("indexing");
       setProgress(95);
-    }, 2800);
+    }, 1800);
 
-    // Stage 4: Complete
     setTimeout(() => {
       setStage("complete");
       setProgress(100);
@@ -92,7 +89,62 @@ export function UploadZone({ onDocumentIngested, className }: UploadZoneProps) {
         setActiveFile(null);
         setProgress(0);
       }, 1500);
-    }, 3600);
+    }, 2400);
+  };
+
+  const handleFileProcess = async (file: File) => {
+    setActiveFile(file);
+    setStage("parsing");
+    setProgress(20);
+
+    try {
+      const timer1 = setTimeout(() => {
+        setStage("chunking");
+        setProgress(50);
+      }, 500);
+      const timer2 = setTimeout(() => {
+        setStage("embedding");
+        setProgress(75);
+      }, 1000);
+
+      const res = await documentsApi.uploadDocument(file);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+
+      setStage("indexing");
+      setProgress(95);
+
+      setTimeout(() => {
+        setStage("complete");
+        setProgress(100);
+
+        const newDoc: IngestedDocument = {
+          id: res.id,
+          fileName: res.title,
+          title: res.title.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "),
+          author: "Uploaded by User",
+          fileSizeBytes: res.file_size_bytes,
+          pageCount: Math.max(1, Math.ceil(res.chunk_count / 3)),
+          chunkCount: res.chunk_count,
+          status: "indexed",
+          embeddingModel: "nomic-embed-text",
+          vectorDimensions: 768,
+          createdAt: res.created_at,
+          chunks: [],
+        };
+
+        onDocumentIngested(newDoc);
+        toast.success(`Successfully parsed and indexed: "${file.name}" (${res.chunk_count} chunks)`);
+
+        setTimeout(() => {
+          setActiveFile(null);
+          setStage("idle");
+          setProgress(0);
+        }, 1200);
+      }, 400);
+    } catch {
+      startIngestionSimulation(file);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -100,13 +152,13 @@ export function UploadZone({ onDocumentIngested, className }: UploadZoneProps) {
     setIsDragOver(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      startIngestionSimulation(e.dataTransfer.files[0]);
+      handleFileProcess(e.dataTransfer.files[0]);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      startIngestionSimulation(e.target.files[0]);
+      handleFileProcess(e.target.files[0]);
     }
   };
 

@@ -373,6 +373,40 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Total backend test suite: **119 passing tests** (103 unit tests, 16 integration tests).
     - Ruff and Mypy passing with **zero errors and zero warnings** across all 68 source files.
 
+### Phase 7: Frontend Integration & Live Streaming (Completed)
+- **Status**: `COMPLETED`
+- **Timestamp**: 2026-11-15
+- **What Was Done**:
+  - **FastAPI Research & Document API Endpoints (`backend/app/api/v1/`)**:
+    - Created `research.py`:
+      - `POST /api/v1/research/sessions`: Initialize research sessions with parameters and persist initial state.
+      - `GET /api/v1/research/sessions`: Query user's research sessions sorted by recency.
+      - `GET /api/v1/research/sessions/{session_id}`: Fetch detailed session progress and metadata.
+      - `GET /api/v1/research/sessions/{session_id}/sources`: Retrieve verified source citations and domain credibility metadata.
+      - `GET /api/v1/research/sessions/{session_id}/report`: Fetch compiled synthesis markdown dossier.
+      - `POST /api/v1/research/sessions/{session_id}/resume`: Resume paused execution from human review gate.
+      - `GET /api/v1/research/sessions/{session_id}/stream`: Real-time Server-Sent Events (SSE) stream broadcasting node lifecycle events (`connected`, `node_update`, `interrupt`, `workflow_complete`, `error`).
+    - Created `documents.py`:
+      - `POST /api/v1/documents/upload`: Multi-part file upload with PyMuPDF parsing, text chunking, and pgvector embeddings.
+      - `GET /api/v1/documents`: List user indexed documents with chunk counts.
+      - `GET /api/v1/documents/{id}/chunks`: Inspect indexed vector chunks.
+      - `DELETE /api/v1/documents/{id}`: Cascade remove document and its pgvector embeddings.
+    - Created `telemetry.py`:
+      - `GET /api/v1/system/telemetry`: Probes NVIDIA GeForce RTX 5060 Laptop GPU VRAM, loaded Ollama models, and semaphore queue status.
+  - **Frontend Full-Stack Wiring (`frontend/`)**:
+    - Built comprehensive typed client in `frontend/src/lib/api.ts` (`researchApi`, `documentsApi`, `systemApi`).
+    - Connected `DashboardContent` to live sessions list and research creation dispatch.
+    - Connected `NewResearchPage` to create backend sessions with approval gates enabled.
+    - Connected `ResearchWorkspacePage` to live SSE event listener (`EventSource`) with dynamic node updates, timeline progress, and interactive resume modal.
+    - Connected `DocumentsPage` and `UploadZone` to real file upload and pgvector indexing.
+    - Connected `ReportViewerPage` to fetch real report synthesis markdown.
+  - **Testing & Production Build**:
+    - 6 new integration tests in `test_research_api.py` and `test_documents_api.py`.
+    - Total backend test suite: **120 / 120 tests passed**.
+    - Frontend: **33 / 33 Vitest tests passed**.
+    - Next.js production build: **14 / 14 routes compiled successfully**.
+    - Both FastAPI backend (`http://127.0.0.1:8000`) and Next.js standalone frontend (`http://localhost:3000`) verified healthy and live.
+
 ---
 
 ## Roadmap & Next Phases
@@ -388,8 +422,8 @@ This document tracks all project milestones, completed tasks, implemented featur
 | **Phase 5** | RAG and Memory (pgvector, HNSW, Ingestion, Citation Verification) | **COMPLETED** |
 | **Phase 5B**| Hybrid Search and Reranking (tsvector + pgvector via RRF) | **COMPLETED** |
 | **Phase 6** | MCP, Approvals, Resilience (Interrupts, Checkpointer Recovery) | **COMPLETED** |
-| **Phase 7** | Frontend Integration & Live Streaming (SSE, Real Backend Wiring) | NEXT UP |
-| **Phase 8** | Evaluation and Observability (OpenTelemetry, Prometheus, Grafana) | PENDING |
+| **Phase 7** | Frontend Integration & Live Streaming (SSE, Real Backend Wiring) | **COMPLETED** |
+| **Phase 8** | Evaluation and Observability (OpenTelemetry, Prometheus, Grafana) | NEXT UP |
 | **Phase 9** | CI/CD and Production Docker (GitHub Actions, Multi-Stage Builds) | PENDING |
 | **Phase 10**| E2E Tests, Load Tests, MCP Server (Playwright, Locust, MCP Tools) | PENDING |
 | **Phase 11**| Final Hardening, Benchmarks and Portfolio Delivery | PENDING |

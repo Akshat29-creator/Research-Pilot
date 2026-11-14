@@ -1,7 +1,7 @@
 import uuid
 from typing import AsyncGenerator
 
-from fastapi import Depends
+from fastapi import Depends, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,13 +20,15 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def get_current_user(
-    auth: HTTPAuthorizationCredentials = Depends(security_scheme),
+    auth: HTTPAuthorizationCredentials | None = Depends(security_scheme),
+    token: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    if not auth or not auth.credentials:
+    raw_token = auth.credentials if auth and auth.credentials else token
+    if not raw_token:
         raise AuthenticationError("Authentication token is missing.")
 
-    payload = decode_access_token(auth.credentials)
+    payload = decode_access_token(raw_token)
     if not payload or "sub" not in payload:
         raise AuthenticationError("Invalid or expired authentication token.")
 

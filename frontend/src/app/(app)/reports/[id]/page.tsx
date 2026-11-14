@@ -38,6 +38,7 @@ import {
   INITIAL_REPORT_MARKDOWN,
 } from "@/components/report/report-content";
 import { toast } from "sonner";
+import { researchApi } from "@/lib/api";
 
 export default function ReportViewerPage() {
   const params = useParams();
@@ -50,6 +51,20 @@ export default function ReportViewerPage() {
   const [copied, setCopied] = React.useState(false);
   const [saveStatus, setSaveStatus] = React.useState<"saved" | "saving">("saved");
   const [highlightCitationId, setHighlightCitationId] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (!sessionId || sessionId.startsWith("sess_")) return;
+    researchApi
+      .getReport(sessionId)
+      .then((rep) => {
+        if (rep && rep.markdown_content) {
+          setMarkdown(rep.markdown_content);
+        }
+      })
+      .catch(() => {
+        // Fallback to initial content
+      });
+  }, [sessionId]);
 
   // Scroll-spy intersection observer
   React.useEffect(() => {

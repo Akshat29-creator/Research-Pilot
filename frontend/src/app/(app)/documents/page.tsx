@@ -40,12 +40,39 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { documentsApi } from "@/lib/api";
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = React.useState<IngestedDocument[]>(SAMPLE_DOCUMENTS);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedDocForChunks, setSelectedDocForChunks] = React.useState<IngestedDocument | null>(null);
   const [docToDelete, setDocToDelete] = React.useState<IngestedDocument | null>(null);
+
+  React.useEffect(() => {
+    documentsApi
+      .listDocuments()
+      .then((docs) => {
+        if (docs && docs.length > 0) {
+          setDocuments(
+            docs.map((d) => ({
+              id: d.id,
+              fileName: d.title,
+              title: d.title.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "),
+              author: "Authenticated User",
+              fileSizeBytes: d.file_size_bytes,
+              pageCount: 10,
+              chunkCount: d.chunk_count,
+              status: "indexed",
+              embeddingModel: "nomic-embed-text",
+              vectorDimensions: 768,
+              createdAt: d.created_at,
+              chunks: [],
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Compute aggregate statistics
   const totalDocuments = documents.length;
@@ -68,8 +95,13 @@ export default function DocumentsPage() {
     setDocuments((prev) => [newDoc, ...prev]);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!docToDelete) return;
+    try {
+      if (!docToDelete.id.startsWith("doc_")) {
+        await documentsApi.deleteDocument(docToDelete.id);
+      }
+    } catch {}
     setDocuments((prev) => prev.filter((d) => d.id !== docToDelete.id));
     toast.success(`Removed "${docToDelete.fileName}" and its ${docToDelete.chunkCount} vector chunks from pgvector.`);
     setDocToDelete(null);

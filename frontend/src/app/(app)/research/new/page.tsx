@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Bot, Cpu, Sparkles, Database, Layers, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { researchApi } from "@/lib/api";
 import { toast } from "sonner";
 
 export default function NewResearchPage() {
@@ -18,17 +19,24 @@ export default function NewResearchPage() {
     "Adversarial prompt injection vulnerabilities in tool-use LangGraph architectures: taxonomy and mitigation",
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
 
     setIsSubmitting(true);
     toast.info("Initializing multi-agent graph with RTX 5060 inference lock...");
 
-    const sessionId = `sess_${Math.random().toString(36).substring(2, 8)}`;
-    setTimeout(() => {
+    try {
+      const sess = await researchApi.createSession(query, { approvalRequired: true });
+      router.push(`/research/${sess.id}?q=${encodeURIComponent(query)}&stream=true`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Connection failed";
+      toast.error(`Backend error: ${msg}. Launching sandbox session.`);
+      const sessionId = `sess_${Math.random().toString(36).substring(2, 8)}`;
       router.push(`/research/${sessionId}?q=${encodeURIComponent(query)}`);
-    }, 600);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

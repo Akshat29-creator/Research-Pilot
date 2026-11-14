@@ -56,6 +56,16 @@ class ConflictError(AppException):
         )
 
 
+class ValidationError(AppException):
+    def __init__(self, message: str, details: Dict[str, Any] | None = None):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="VALIDATION_ERROR",
+            details=details or {},
+        )
+
+
 async def app_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     request_id = getattr(request.state, "request_id", "unknown")
     if isinstance(exc, AppException):

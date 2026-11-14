@@ -30,6 +30,7 @@ import { StreamingFeed, SAMPLE_STREAM_EVENTS, StreamEvent } from "@/components/r
 import { SourcesDrawer, SAMPLE_SOURCES } from "@/components/research/sources-drawer";
 import { ApprovalModal } from "@/components/research/approval-modal";
 import { ErrorState } from "@/components/ui/error-state";
+import { researchApi } from "@/lib/api";
 import { toast } from "sonner";
 
 interface PlanStep {
@@ -109,35 +110,97 @@ export default function ResearchWorkspacePage() {
     return () => clearInterval(interval);
   }, [sessionStatus]);
 
+  // Live SSE connection when stream=true
+  React.useEffect(() => {
+    if (!sessionId || sessionId.startsWith("sess_")) return;
+
+    researchApi
+      .getSession(sessionId)
+      .then((detail) => {
+        if (detail.report) {
+          setSessionStatus("completed");
+        }
+      })
+      .catch(() => {});
+
+    if (searchParams.get("stream") === "true") {
+      setSessionStatus("running");
+      const streamUrl = researchApi.getStreamUrl(sessionId);
+      const eventSource = new EventSource(streamUrl);
+
+      eventSource.addEventListener("node_update", (e) => {
+        try {
+          const payload = JSON.parse(e.data);
+          setActiveAgent(payload.node);
+          if (payload.plan && payload.plan.length > 0) {
+            setPlanSteps(
+              payload.plan.map((p: { step: number; description: string }, idx: number) => ({
+                id: `step-${idx + 1}`,
+                label: p.description?.substring(0, 30) || `Investigation Step ${idx + 1}`,
+                agent: payload.node === "orchestrator" ? "Orchestrator" : "Research",
+                status: "running",
+                details: p.description || "",
+              }))
+            );
+          }
+        } catch {}
+      });
+
+      eventSource.addEventListener("interrupt", () => {
+        setSessionStatus("awaiting_approval");
+        setIsApprovalOpen(true);
+      });
+
+      eventSource.addEventListener("workflow_complete", () => {
+        setSessionStatus("completed");
+        eventSource.close();
+        toast.success("Research pipeline complete! Report is ready.");
+      });
+
+      eventSource.addEventListener("error", () => {
+        eventSource.close();
+      });
+
+      return () => {
+        eventSource.close();
+      };
+    }
+  }, [sessionId, searchParams]);
+
   const formatTimer = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     setIsApprovalOpen(false);
-    setSessionStatus("completed");
-    setPlanSteps((steps) =>
-      steps.map((s) => (s.id === "step-5" ? { ...s, status: "completed", duration: "0.8s" } : s))
-    );
-    toast.success("Verification approved. Full research report compiled!");
+    try {
+      if (!sessionId.startsWith("sess_")) {
+        await researchApi.resumeSession(sessionId, true, "Approved by user");
+      }
+      setSessionStatus("completed");
+      setPlanSteps((steps) =>
+        steps.map((s) => (s.id === "step-5" ? { ...s, status: "completed", duration: "0.8s" } : s))
+      );
+      toast.success("Verification approved. Full research report compiled!");
+    } catch {
+      setSessionStatus("completed");
+    }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     setIsApprovalOpen(false);
-    setReviewIteration((prev) => prev + 1);
-    setSessionStatus("running");
-    setPlanSteps((steps) =>
-      steps.map((s) =>
-        s.id === "step-4"
-          ? { ...s, status: "running", details: `Revision loop ${reviewIteration + 1}: Tightening claim boundaries.` }
-          : s.id === "step-5"
-          ? { ...s, status: "pending" }
-          : s
-      )
-    );
-    toast.info(`Review rejected. Triggered revision loop ${reviewIteration + 1} of 3.`);
+    try {
+      if (!sessionId.startsWith("sess_")) {
+        await researchApi.resumeSession(sessionId, false, "Rejected by user");
+      }
+      setReviewIteration((prev) => prev + 1);
+      setSessionStatus("running");
+      toast.info(`Review rejected. Triggered revision loop ${reviewIteration + 1} of 3.`);
+    } catch {
+      setSessionStatus("running");
+    }
   };
 
   const handleSimulateError = () => {
