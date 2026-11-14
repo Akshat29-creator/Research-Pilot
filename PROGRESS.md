@@ -313,6 +313,37 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Full backend unit test suite: **62 / 62 tests passed in 3.53s**.
     - Ruff and Mypy passing with **zero errors and zero warnings** across all 12 workflow files.
 
+### Phase 5: RAG and Memory (Completed)
+- **Status**: `COMPLETED`
+- **Timestamp**: 2026-11-15
+- **What Was Done**:
+  - **Recursive Character & Semantic Text Chunking (`backend/app/services/chunking.py`)**:
+    - Built `split_text_recursive()` preserving paragraph boundaries (`\n\n`), sentence boundaries (`. `, `? `, `! `), and punctuation without cutting words or mid-sentence phrases.
+    - Implemented `chunk_text()` generating structured `TextChunk` containers with character offsets, page indices, and token approximations (~4 chars/token).
+    - Implemented `chunk_parsed_document()` ingesting PyMuPDF `ParsedDocument` instances, preserving 1-based `page_number` for precise footnote citation tracking.
+  - **Document Ingestion & Content Deduplication (`backend/app/services/ingestion_service.py`)**:
+    - Built `compute_sha256()` hashing raw incoming bytes/strings.
+    - Implemented `ingest_document()`:
+      - Inspects existing `documents` table by `(user_id, content_hash)`; if match exists, skips redundant vector embedding computation to conserve compute and VRAM.
+      - Dispatches chunking based on MIME type (PDF via PyMuPDF or plain text/HTML).
+      - Generates 768-dimensional normalized float vectors in batches using `OllamaEmbeddingProvider` (`nomic-embed-text`) guarded by the global GPU semaphore.
+      - Persists `Document` and `DocumentChunk` entities transactionally in PostgreSQL.
+  - **pgvector HNSW Semantic Retrieval (`backend/app/services/retrieval_service.py`)**:
+    - Implemented `semantic_search()` executing approximate nearest neighbor queries over PostgreSQL `document_chunks` using pgvector cosine distance (`1 - (embedding <=> query_vector)`).
+    - Enforced strict multi-tenant isolation via `Document.user_id == user_id`.
+    - Supported configurable `min_similarity` thresholds (default 0.65) and top-k slicing.
+  - **Citation Grounding & Audit Engine (`backend/app/services/citation_service.py`)**:
+    - Implemented two-tier validation: normalized substring containment and token 3-gram asymmetric Jaccard coverage.
+    - Authored `extract_claims_with_citations()` parsing markdown reports to isolate assertions paired with footnote citations `[^N]`.
+    - Implemented `audit_report_citations()` computing aggregate grounding ratio, categorization (`VERIFIED`, `PARTIAL`, `UNVERIFIED`), and passing status (threshold $\ge 0.85$).
+  - **Testing & Verification**:
+    - 6 unit tests in `test_chunking.py` verifying paragraph preservation, recursive overlap, token estimates, and multi-page PDF chunking.
+    - 10 unit tests in `test_citation_service.py` verifying string normalization, 3-gram calculations, exact matches, partial matches, unverified assertions, footnote parsing, and report audits.
+    - 5 unit tests in `test_rag_services.py` verifying SHA-256 deduplication (zero embedding calls on duplicate), new document persistence, and query assembly.
+    - 1 comprehensive live integration test in `test_rag_pgvector.py` running against live PostgreSQL (`researchpilot-postgres`) and live Ollama (`nomic-embed-text`), verifying ingestion, deduplication, cosine similarity retrieval, tenant isolation, and citation audits.
+    - Total backend test suite: **99 / 99 tests passed in 22.02s**.
+    - Ruff and Mypy passing with **zero errors and zero warnings** across all 61 source files.
+
 ---
 
 ## Roadmap & Next Phases
@@ -325,8 +356,8 @@ This document tracks all project milestones, completed tasks, implemented featur
 | **Phase 2** | LLM Infrastructure (Ollama Provider, Structured JSON, Semaphore) | **COMPLETED** |
 | **Phase 3** | Research Agent (Search Provider, PyMuPDF, SSRF Defense) | **COMPLETED** |
 | **Phase 4** | Multi-Agent Orchestration (LangGraph, State Machine, Review Loop) | **COMPLETED** |
-| **Phase 5** | RAG and Memory (pgvector, HNSW, Ingestion, Citation Verification) | NEXT UP |
-| **Phase 5B**| Hybrid Search and Reranking (tsvector + pgvector via RRF) | PENDING |
+| **Phase 5** | RAG and Memory (pgvector, HNSW, Ingestion, Citation Verification) | **COMPLETED** |
+| **Phase 5B**| Hybrid Search and Reranking (tsvector + pgvector via RRF) | NEXT UP |
 | **Phase 6** | MCP, Approvals, Resilience (Interrupts, Checkpointer Recovery) | PENDING |
 | **Phase 7** | Frontend (Next.js App Router, SSE Stream, Dark SaaS UI) | PENDING |
 | **Phase 8** | Evaluation and Observability (OpenTelemetry, Prometheus, Grafana) | PENDING |
