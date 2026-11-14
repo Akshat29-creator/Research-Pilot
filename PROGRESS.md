@@ -251,6 +251,37 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Full backend test suite passing: **38 / 38 tests passing in 15.4s**.
     - Ruff and Mypy passing with **zero errors and zero warnings**.
 
+### Phase 3: Research Agent & Tool Pipeline (Completed)
+- **Status**: `COMPLETED`
+- **Timestamp**: 2026-11-15
+- **What Was Done**:
+  - **Search Provider Abstraction (`backend/app/integrations/search/`)**:
+    - Created `SearchResult` container with URL canonicalization (stripping tracking query parameters like `utm_*`, `ref`, `fbclid`, lowercasing hostnames, removing trailing slashes).
+    - Implemented `SearXNGSearchProvider` querying local Docker metasearch container (`localhost:8080`) with deduplication and error tolerance.
+    - Implemented `TavilySearchProvider` and `BraveSearchProvider` with optional API key checks and health probes.
+    - Implemented `get_search_provider()` factory with automatic fallback to local SearXNG if cloud search API keys are not supplied.
+  - **SSRF Defense & Safe Web Retrieval (`backend/app/tools/ssrf.py`)**:
+    - Built `validate_url_ssrf()` enforcing HTTP/HTTPS schemes, resolving DNS hostnames, and rejecting RFC 1918 private IPs (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.0/8`, `::1`), link-local (`169.254.0.0/16`, `fe80::/10`), and cloud instance metadata (`169.254.169.254`).
+    - Built `safe_fetch_url()` with per-hop redirect validation (max 3 hops), 10s connection timeouts, and 5MB payload caps.
+  - **Readability & Web Extraction (`backend/app/tools/web_extractor.py`)**:
+    - Implemented `extract_web_content()` using `BeautifulSoup` to strip boilerplate tags (`<script>`, `<style>`, `<noscript>`, `<iframe>`, `<header>`, `<footer>`, `<nav>`, `<aside>`, `<form>`, `<svg>`, `<button>`) and advertisement modals.
+    - Extracted clean text, page titles, canonical URLs, and word/char counts.
+  - **PyMuPDF Document Parsing (`backend/app/tools/pdf_parser.py`)**:
+    - Implemented `parse_pdf_bytes()` and `parse_pdf_file()` using `PyMuPDF` (`fitz`).
+    - Preserved 1-based page numbers (`ParsedPage.page_number`) for exact citation grounding.
+    - Computed cryptographic SHA-256 checksums of PDF bytes for immutable provenance tracking.
+  - **Prompt Injection Defense & Boundary Delimiters (`backend/app/tools/isolation.py`)**:
+    - Authored `sanitize_untrusted_text()` defanging closing `</untrusted_source_document>` tags, ChatML tokens (`<|im_start|>`, `<|im_end|>`), and LLM instruction delimiters (`[INST]`, `<think>`).
+    - Built `wrap_untrusted_content()` and `wrap_multiple_untrusted_sources()` placing untrusted text within explicit XML containers.
+    - Authored `get_isolation_system_directive()` providing strict instructions forbidding LLMs from following commands inside evidence blocks.
+  - **Research Agent Orchestrator (`backend/app/agents/research.py`)**:
+    - Implemented `ResearchAgent` orchestrating query planning (decomposing topics into 2-3 focused search angles), source gathering with deduplication and SSRF safety, and structured synthesis (`ResearchSynthesis`) with local LLM.
+  - **Testing & Verification**:
+    - 25 unit tests across `test_search_providers.py`, `test_ssrf_validator.py`, `test_web_extractor.py`, `test_pdf_parser.py`, `test_prompt_isolation.py`, and `test_research_agent.py`.
+    - 2 live integration tests in `test_searxng.py` testing the local running `researchpilot-searxng` container on `localhost:8080`.
+    - Total backend test suite: **65 / 65 tests passing in 18.25s**.
+    - Ruff and Mypy passing with **zero errors and zero warnings**.
+
 ---
 
 ## Roadmap & Next Phases
@@ -261,8 +292,8 @@ This document tracks all project milestones, completed tasks, implemented featur
 | **Phase 0** | System Analysis, Hardware Audit & Architecture | **COMPLETED** |
 | **Phase 1** | Foundation (FastAPI Skeleton, Next.js Shell, Docker Compose) | **COMPLETED** |
 | **Phase 2** | LLM Infrastructure (Ollama Provider, Structured JSON, Semaphore) | **COMPLETED** |
-| **Phase 3** | Research Agent (Search Provider, PyMuPDF, SSRF Defense) | NEXT UP |
-| **Phase 3** | Research Agent (Search Provider, PyMuPDF, SSRF Defense) | PENDING |
+| **Phase 3** | Research Agent (Search Provider, PyMuPDF, SSRF Defense) | **COMPLETED** |
+| **Phase 4** | Multi-Agent Orchestration (LangGraph, State Machine, Review Loop) | NEXT UP |
 | **Phase 4** | Multi-Agent Orchestration (LangGraph, State Machine, Review Loop) | PENDING |
 | **Phase 5** | RAG and Memory (pgvector, HNSW, Ingestion, Citation Verification) | PENDING |
 | **Phase 5B**| Hybrid Search and Reranking (tsvector + pgvector via RRF) | PENDING |
