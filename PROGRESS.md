@@ -221,6 +221,36 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Captured high-fidelity desktop (1440px), autofill, validation error, and mobile (390px) screenshots in `docs/screenshots/auth-redesign-*.png`.
     - Created Stage 4 Screen 9 review artifact `stage_4_screen_9_auth_review.md`.
 
+### Phase 2: LLM Infrastructure (Completed)
+- **Status**: `COMPLETED`
+- **Timestamp**: 2026-11-15
+- **What Was Done**:
+  - **Provider Architecture & Typed Error Hierarchy (`backend/app/integrations/llm/`)**:
+    - Created typed error classes in `exceptions.py` inheriting from `AppException` (`LLMError`, `LLMConnectionError`, `LLMModelNotFoundError`, `LLMStructuredOutputError`, `LLMTimeoutError`).
+    - Standardized response containers in `base.py`: `LLMResponse` (with prompt/completion token tracking, durations, and metadata) and `ProviderHealth` (probing daemon reachability, model presence, VRAM footprint, and CPU layer spill).
+    - Established abstract base classes `LLMProvider` and `EmbeddingProvider`.
+  - **Hardware Concurrency Guard (`semaphore.py`)**:
+    - Built global singleton `asyncio.Semaphore(1)` enforcing strict FIFO serialization on host NVIDIA GeForce RTX 5060 Laptop GPU (8GB VRAM) to prevent parallel allocation OOM driver crashes.
+    - Added telemetry counters (`total_acquisitions`, `active_acquisitions`, `waiting_requests`, `total_wait_duration_ms`).
+  - **Reasoning Thought Stripping & Bounded 1-Shot Schema Repair (`structured.py`)**:
+    - Authored `strip_thinking_tags()` to handle `qwen3:8b` reasoning blocks (`<think>...</think>`), multi-line tags, and truncated unclosed trailing tags.
+    - Implemented `extract_json_string()` supporting markdown code blocks (` ```json...``` `), raw JSON objects/arrays, and automated trailing comma cleanup.
+    - Authored `format_schema_prompt()` generating strict Pydantic JSON schemas.
+    - Authored `format_repair_prompt()` providing the validation error diff, invalid snippet, and target schema for a single bounded 1-shot repair retry.
+  - **Ollama Provider Implementation (`ollama.py`)**:
+    - Implemented `OllamaProvider(LLMProvider)` with semaphore lock acquisition, options merging (`num_ctx=4096`, `temperature=0.1`), timeout/connection handling, streaming with async generator, and structured validation with 1-shot repair.
+    - Added deep health diagnostics via `/api/tags` and `/api/ps` measuring active VRAM allocations and detecting host system RAM spill.
+  - **Vector Embedding Provider (`embeddings.py`)**:
+    - Implemented `OllamaEmbeddingProvider(EmbeddingProvider)` for `nomic-embed-text` (768-dimensional float vectors).
+    - Supported both single string `embed_text()` and high-throughput batch `embed_batch()` under semaphore lock with fallback mechanisms.
+  - **Factory & Public Interface (`factory.py`, `__init__.py`)**:
+    - Added singleton accessors `get_llm_provider()` and `get_embedding_provider()` with reset capability for clean testing.
+  - **Testing & Verification**:
+    - 19 unit tests in `tests/unit/test_llm_provider.py` covering thinking tag removal, JSON extraction, schema prompts, semaphore serialization, error mapping, and 1-shot repair recovery.
+    - 4 live integration tests in `tests/integration/test_ollama.py` querying local host Ollama daemon (:11434), verifying healthy probes, actual 768-d vector embeddings, and live `qwen3:8b` text generation.
+    - Full backend test suite passing: **38 / 38 tests passing in 15.4s**.
+    - Ruff and Mypy passing with **zero errors and zero warnings**.
+
 ---
 
 ## Roadmap & Next Phases
@@ -229,8 +259,9 @@ This document tracks all project milestones, completed tasks, implemented featur
 |---|---|---|
 | **Prompt 0** | Bootstrap (Rules, Skills, Workflows) | **COMPLETED** |
 | **Phase 0** | System Analysis, Hardware Audit & Architecture | **COMPLETED** |
-| **Phase 1** | Foundation (FastAPI Skeleton, Next.js Shell, Docker Compose) | **COMPLETED (AWAITING APPROVAL)** |
-| **Phase 2** | LLM Infrastructure (Ollama Provider, Structured JSON, Semaphore) | NEXT UP |
+| **Phase 1** | Foundation (FastAPI Skeleton, Next.js Shell, Docker Compose) | **COMPLETED** |
+| **Phase 2** | LLM Infrastructure (Ollama Provider, Structured JSON, Semaphore) | **COMPLETED** |
+| **Phase 3** | Research Agent (Search Provider, PyMuPDF, SSRF Defense) | NEXT UP |
 | **Phase 3** | Research Agent (Search Provider, PyMuPDF, SSRF Defense) | PENDING |
 | **Phase 4** | Multi-Agent Orchestration (LangGraph, State Machine, Review Loop) | PENDING |
 | **Phase 5** | RAG and Memory (pgvector, HNSW, Ingestion, Citation Verification) | PENDING |
