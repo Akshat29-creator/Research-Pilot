@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 from pydantic import BaseModel, Field
 
 from app.integrations.llm.factory import get_llm_provider
+from app.workflows.interrupts import gate_approval
 from app.workflows.state import ResearchWorkflowState
 
 logger = logging.getLogger("researchpilot.workflows.orchestrator")
@@ -67,9 +68,22 @@ async def orchestrator_node(state: ResearchWorkflowState) -> Dict[str, Any]:
     timings = dict(state.get("timings", {}))
     timings["orchestrator"] = elapsed
 
+    # Check if human-in-the-loop approval gate is active
+    gate_update = gate_approval(
+        step_name="plan_approval",
+        state=state,
+        payload={"plan": plan_steps, "sub_queries": sub_queries},
+    )
+
+    new_status = gate_update.get("status", "PLANNED")
+    errors = list(state.get("errors", []))
+    if "errors" in gate_update:
+        errors.extend(gate_update["errors"])
+
     return {
         "plan": plan_steps,
         "sub_queries": sub_queries,
-        "status": "PLANNED",
+        "status": new_status,
+        "errors": errors,
         "timings": timings,
     }

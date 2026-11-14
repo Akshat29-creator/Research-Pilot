@@ -2,6 +2,7 @@ import logging
 from typing import Any, AsyncIterator, Dict, Tuple
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.types import Command
 
 from app.workflows.builder import compile_research_workflow
 from app.workflows.state import ResearchWorkflowState, create_initial_state
@@ -14,6 +15,7 @@ async def run_research_workflow(
     session_id: str | None = None,
     user_id: str | None = None,
     max_iterations: int = 3,
+    approval_required: bool = False,
     checkpointer: BaseCheckpointSaver | None = None,
 ) -> ResearchWorkflowState:
     """Execute complete multi-agent research pipeline to completion."""
@@ -22,6 +24,7 @@ async def run_research_workflow(
         session_id=session_id,
         user_id=user_id,
         max_iterations=max_iterations,
+        approval_required=approval_required,
     )
     thread_id = initial_state["session_id"]
     workflow = compile_research_workflow(checkpointer=checkpointer)
@@ -38,6 +41,7 @@ async def stream_research_workflow(
     session_id: str | None = None,
     user_id: str | None = None,
     max_iterations: int = 3,
+    approval_required: bool = False,
     checkpointer: BaseCheckpointSaver | None = None,
 ) -> AsyncIterator[Tuple[str, Dict[str, Any]]]:
     """Stream node execution step events for real-time SSE updates."""
@@ -46,6 +50,7 @@ async def stream_research_workflow(
         session_id=session_id,
         user_id=user_id,
         max_iterations=max_iterations,
+        approval_required=approval_required,
     )
     thread_id = initial_state["session_id"]
     workflow = compile_research_workflow(checkpointer=checkpointer)
@@ -56,3 +61,17 @@ async def stream_research_workflow(
     async for event in workflow.astream(initial_state, config=config, stream_mode="updates"):
         for node_name, node_update in event.items():
             yield (node_name, node_update)
+
+
+async def resume_research_workflow(
+    thread_id: str,
+    resume_value: Dict[str, Any],
+    checkpointer: BaseCheckpointSaver | None = None,
+) -> ResearchWorkflowState:
+    """Resume a suspended research workflow execution using Command(resume=...)."""
+    workflow = compile_research_workflow(checkpointer=checkpointer)
+    config: Dict[str, Any] = {"configurable": {"thread_id": thread_id}}
+    logger.info("Resuming research workflow for thread_id=%s with resume payload", thread_id)
+
+    resumed_state = await workflow.ainvoke(Command(resume=resume_value), config=config)
+    return resumed_state

@@ -1,5 +1,9 @@
 import asyncio
+import sys
 from typing import AsyncGenerator
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 import pytest
 import pytest_asyncio

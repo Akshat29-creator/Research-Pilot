@@ -5,6 +5,14 @@ from app.workflows.state import ResearchWorkflowState
 logger = logging.getLogger("researchpilot.workflows.router")
 
 
+def route_after_orchestrator(state: ResearchWorkflowState) -> str:
+    """Evaluate whether the research plan was approved or rejected by human review."""
+    if state.get("status") == "REJECTED":
+        logger.info("Research plan was rejected by user. Terminating workflow.")
+        return "end"
+    return "researcher"
+
+
 def route_after_review(state: ResearchWorkflowState) -> str:
     """Evaluate reviewer feedback and determine next graph node.
 

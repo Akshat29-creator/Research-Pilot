@@ -42,6 +42,7 @@ def create_initial_state(
     session_id: str | None = None,
     user_id: str | None = None,
     max_iterations: int = 3,
+    approval_required: bool = False,
 ) -> ResearchWorkflowState:
     """Initialize a clean, fully populated ResearchWorkflowState dictionary."""
     clean_session_id = session_id or str(uuid.uuid4())
@@ -63,7 +64,7 @@ def create_initial_state(
         "max_iterations": max_iterations,
         "status": "INITIALIZED",
         "errors": [],
-        "approval_required": False,
+        "approval_required": approval_required,
         "final_report_id": None,
         "final_report_markdown": None,
         "timings": {},

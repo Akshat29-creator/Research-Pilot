@@ -13,7 +13,7 @@ from app.workflows.nodes import (
     reviewer_node,
     writer_node,
 )
-from app.workflows.router import route_after_review
+from app.workflows.router import route_after_orchestrator, route_after_review
 from app.workflows.state import ResearchWorkflowState
 
 logger = logging.getLogger("researchpilot.workflows.builder")
@@ -31,9 +31,16 @@ def build_research_graph() -> StateGraph:
     graph.add_node("reviewer", reviewer_node)
     graph.add_node("final_report", final_report_node)
 
-    # 2. Add sequential linear edges
+    # 2. Add sequential linear edges & human-in-the-loop plan gate
     graph.add_edge(START, "orchestrator")
-    graph.add_edge("orchestrator", "researcher")
+    graph.add_conditional_edges(
+        "orchestrator",
+        route_after_orchestrator,
+        {
+            "researcher": "researcher",
+            "end": END,
+        },
+    )
     graph.add_edge("researcher", "analyst")
     graph.add_edge("analyst", "writer")
     graph.add_edge("writer", "reviewer")

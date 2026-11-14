@@ -344,35 +344,34 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Total backend test suite: **99 / 99 tests passed in 22.02s**.
     - Ruff and Mypy passing with **zero errors and zero warnings** across all 61 source files.
 
-### Phase 5B: Hybrid Search and Reranking (Completed)
+### Phase 6: Advanced Agent Capabilities & MCP Client (Completed)
 - **Status**: `COMPLETED`
 - **Timestamp**: 2026-11-15
 - **What Was Done**:
-  - **PostgreSQL Full-Text Search Schema (`backend/alembic/versions/002_hybrid_search.py`)**:
-    - Created migration `002_hybrid_search` adding `content_tsvector` as a `STORED` generated column (`to_tsvector('english', content)`).
-    - Created generalized inverted index `idx_document_chunks_content_tsvector_gin` for sub-millisecond keyword retrieval.
-    - Updated `DocumentChunk` model with `FetchedValue()` and SQLite variant to maintain 100% compatibility across test engines and PostgreSQL.
-  - **Full-Text Retrieval Service (`backend/app/services/hybrid_search_service.py`)**:
-    - Built `full_text_search()` using `websearch_to_tsquery('english', :query)` and `ts_rank()` to safely evaluate natural language keyword searches without syntax errors.
-    - Preserved tenant boundaries via `WHERE Document.user_id == user_id`.
-  - **Reciprocal Rank Fusion (RRF) Engine (`backend/app/services/hybrid_search_service.py`)**:
-    - Implemented `reciprocal_rank_fusion()` using the standard formula $\text{RRF Score}(d) = \sum_{m} \frac{1}{k + \text{rank}_m(d) + 1}$ ($k=60$).
-    - Boosts documents present across both vector similarity and keyword matches.
-  - **VRAM-Safe CPU Reranking Pass (`backend/app/services/hybrid_search_service.py`)**:
-    - Built `apply_vram_safe_reranking()` evaluating exact phrase containment, query term proximity, and coverage ratios on host CPU without allocating GPU memory, protecting the 8GB VRAM headroom on the RTX 5060 Laptop GPU.
-    - Configured `hybrid_search()` orchestrating vector retrieval, full-text retrieval, RRF fusion, and optional reranking.
-  - **Empirical Retrieval Benchmarks (`backend/scripts/benchmark_retrieval.py`, `docs/HYBRID_SEARCH.md`)**:
-    - Executed live benchmark across 10 evaluation queries and 5 technical corpus documents:
-      - Vector Only (pgvector HNSW): P@1: 100.0%, R@5: 100.0%, Latency: 1263.0ms (cold embed).
-      - Text Only (PostgreSQL tsvector/GIN): P@1: 50.0%, R@5: 50.0%, Latency: 1.6ms.
-      - Hybrid Search (RRF k=60): P@1: 100.0%, R@5: 100.0%, Latency: 167.2ms.
-      - Hybrid Search + Reranking: P@1: 100.0%, R@5: 100.0%, Latency: 180.7ms (only +13.5ms on CPU).
-    - Authored comprehensive documentation in `docs/HYBRID_SEARCH.md`.
+  - **Model Context Protocol (MCP) Client (`backend/app/integrations/mcp/`)**:
+    - Created Pydantic v2 schemas in `models.py`: `MCPToolParameter`, `MCPToolDefinition`, `MCPToolCall`, and `MCPToolResult`.
+    - Implemented `MCPClient` in `client.py` with strict schema validation against JSON schema definitions, bounded 15s execution timeout (`asyncio.wait_for`), and prompt injection defense via `sanitize_untrusted_text()` (defanging ChatML `<|im_start|>` to `[CHATML_START_DEFANGED]`).
+    - Implemented `MCPToolRegistry` in `registry.py` with singleton access `get_mcp_registry()` for unified discovery and dispatch across external tool servers.
+  - **Human-in-the-Loop (HITL) Workflow Pauses & Interrupts (`backend/app/workflows/interrupts.py`)**:
+    - Implemented `gate_approval(step_name, state, payload)` invoking LangGraph's native `interrupt()` when `approval_required=True`.
+    - Built database helpers `create_approval_record()`, `resolve_approval_record()`, and `get_pending_approvals()` managing `Approval` entities in PostgreSQL.
+    - Updated `orchestrator_node` to trigger `plan_approval` gate and route conditionally:
+      - `route_after_orchestrator` branches to `END` if plan is rejected by the human reviewer, or to `researcher` if approved.
+  - **PostgreSQL Checkpoint Persistence & Crash Recovery (`backend/app/workflows/checkpointer.py`, `runner.py`)**:
+    - Implemented `get_async_postgres_checkpointer()` using `AsyncPostgresSaver` backed by PostgreSQL 16 checkpoint tables (`checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations`).
+    - Automated event loop policy configuration for Windows (`WindowsSelectorEventLoopPolicy`) for non-blocking psycopg async compatibility.
+    - Implemented `resume_research_workflow(thread_id, resume_value, checkpointer)` utilizing `Command(resume=...)` to seamlessly resume suspended workflows.
+    - Zero VRAM overhead during workflow suspension (no background GPU allocations).
+  - **Documentation & Architecture (`docs/ADVANCED_CAPABILITIES.md`)**:
+    - Authored comprehensive architecture guide detailing MCP schemas, security guarantees, HITL state transitions, and PostgreSQL checkpoint persistence.
   - **Testing & Verification**:
-    - 4 unit tests in `test_hybrid_search.py` verifying RRF formula weights, overlapping boosts, phrase bonuses, and empty query handling.
-    - 1 live integration test in `test_hybrid_search_live.py` verifying GIN index text matching, HNSW vector search, RRF fusion ranking, reranking, and tenant isolation.
-    - Total backend test suite: **104 / 104 tests passed in 17.48s**.
-    - Ruff and Mypy passing with **zero errors and zero warnings** across all 63 source files.
+    - 8 unit tests in `test_mcp_client.py` covering tool discovery, invocation, parameter validation, type mismatches, prompt injection sanitization, timeout enforcement, and registry routing.
+    - 8 unit tests in `test_workflow_interrupts.py` covering approval record creation, resolution, pending retrieval, approval gates, and orchestrator routing.
+    - 2 live PostgreSQL integration tests in `test_checkpointer_recovery.py`:
+      1. `test_postgres_checkpointer_pause_and_resume`: Verified pausing at orchestrator interrupt, writing checkpoint to PostgreSQL `checkpoints` table, and resuming to full report generation.
+      2. `test_postgres_checkpointer_reject_and_halt`: Verified rejecting research plan at interrupt routes immediately to `END` with status `REJECTED`.
+    - Total backend test suite: **119 passing tests** (103 unit tests, 16 integration tests).
+    - Ruff and Mypy passing with **zero errors and zero warnings** across all 68 source files.
 
 ---
 
@@ -388,8 +387,8 @@ This document tracks all project milestones, completed tasks, implemented featur
 | **Phase 4** | Multi-Agent Orchestration (LangGraph, State Machine, Review Loop) | **COMPLETED** |
 | **Phase 5** | RAG and Memory (pgvector, HNSW, Ingestion, Citation Verification) | **COMPLETED** |
 | **Phase 5B**| Hybrid Search and Reranking (tsvector + pgvector via RRF) | **COMPLETED** |
-| **Phase 6** | MCP, Approvals, Resilience (Interrupts, Checkpointer Recovery) | NEXT UP |
-| **Phase 7** | Frontend (Next.js App Router, SSE Stream, Dark SaaS UI) | PENDING |
+| **Phase 6** | MCP, Approvals, Resilience (Interrupts, Checkpointer Recovery) | **COMPLETED** |
+| **Phase 7** | Frontend Integration & Live Streaming (SSE, Real Backend Wiring) | NEXT UP |
 | **Phase 8** | Evaluation and Observability (OpenTelemetry, Prometheus, Grafana) | PENDING |
 | **Phase 9** | CI/CD and Production Docker (GitHub Actions, Multi-Stage Builds) | PENDING |
 | **Phase 10**| E2E Tests, Load Tests, MCP Server (Playwright, Locust, MCP Tools) | PENDING |
