@@ -5,7 +5,7 @@ This document tracks all project milestones, completed tasks, implemented featur
 ---
 
 ## Current Status Overview
-- **Active Phase**: Phase 0 Refinements Completed (System Analysis & Architecture) -> Awaiting Final Confirmation to Start Phase 1 (Foundation)
+- **Active Phase**: Phase 1 Completed (Foundation) -> Awaiting User Approval to start Phase 2 (LLM Infrastructure)
 - **Repository**: `https://github.com/Akshat29-creator/Research-Pilot.git`
 - **Branch**: `main`
 - **Target Hardware**: Lenovo Legion Pro 5 | AMD Ryzen 7 8745HX | RTX 5060 Laptop GPU (8GB VRAM) | Windows 11 + WSL2
@@ -28,41 +28,59 @@ This document tracks all project milestones, completed tasks, implemented featur
   - Added global concurrency limit rule (`asyncio.Semaphore(1)`).
 
 ### Phase 0: System Analysis & Architecture (Completed & Refined)
-- **Status**: `COMPLETED (AWAITING CONFIRMATION FOR PHASE 1)`
+- **Status**: `COMPLETED`
 - **Timestamp**: 2026-11-14
 - **What Was Done**:
-  - **Task 1: Environment & Hardware Audit**:
-    - OS: Windows 11 Home 64-bit (Build 26300), WSL2 active with Ubuntu 20.04 and Docker Desktop.
-    - Compute: AMD Ryzen 7 8745HX (16 threads), 32 GB RAM (~16 GB free physical memory).
-    - GPU: NVIDIA GeForce RTX 5060 Laptop GPU (8151 MiB VRAM total, Driver 621.14, CUDA 13.5).
-    - VRAM Headroom: 1917 MiB used by Windows display/apps, leaving ~6234 MiB (~6.1 GB) usable VRAM.
-    - Runtimes: Python 3.11.9, Node.js v24.14.0, npm 11.9.0, Docker 29.3.1, Docker Compose v5.1.0.
-  - **Task 2: Model Selection**:
-    - Primary Reasoning Model: `qwen3:8b` / `qwen3:8b-q4_K_M` (5.2 GB size).
-    - Embedding Model: `nomic-embed-text:latest` (274 MB size, 768 dimensions).
-    - Handling Qwen3 `<think>` tags: Designed text sanitizer to strip thinking tokens prior to Pydantic JSON schema deserialization.
-  - **Task 3 & 4: Architectural Deliverables Authored**:
-    - `docs/ARCHITECTURE.md`: Complete system topology, component interactions, sequence diagram, and security boundaries.
-    - `docs/TECH_STACK.md`: Full technology specifications and version pin mappings.
-    - `docs/DATABASE_DESIGN.md`: Entity-relationship (ER) diagram, schema definitions for all 8 tables, HNSW and GIN index specifications.
-    - `docs/DEVELOPMENT_ROADMAP.md`: Phased execution roadmap from Phase 0 to Phase 11.
-    - `docs/ADR/`: 5 formal Architecture Decision Records (ADR-001 through ADR-005).
-  - **Approved Architectural Refinements (User Directives)**:
-    1. **In-Container VRAM Monitoring via Ollama `/api/ps`**:
-       - Replaced containerized `nvidia-smi` dependency with native HTTP queries to Ollama's `GET /api/ps` (inspecting `size_vram` vs `size`).
-       - Configured `/ready` probe to report `"degraded"` status (not a hard failure) when available VRAM headroom is below `VRAM_WARN_THRESHOLD_MB` (default: 5500 MB).
-       - Updated [docs/ADR/ADR-003-hardware-concurrency-and-vram-budget.md](docs/ADR/ADR-003-hardware-concurrency-and-vram-budget.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-    2. **Host Networking & Security Hardening**:
-       - Standardized Docker-to-host connectivity using `host.docker.internal` with `extra_hosts: ["host.docker.internal:host-gateway"]`.
-       - Documented `OLLAMA_HOST=0.0.0.0` configuration instructions and Windows Defender Firewall LAN-exposure warnings in [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
-    3. **Zero-Cost Default Search Provider (SearXNG)**:
-       - Selected local containerized **SearXNG** as the default search engine (`SEARCH_PROVIDER=searxng`), eliminating paid API key requirements.
-       - Kept Tavily and Brave as optional pluggable adapters.
-       - Documented SearXNG operational characteristics, upstream engine CAPTCHA risks, and latency mitigation in [docs/RESEARCH_AGENT.md](docs/RESEARCH_AGENT.md).
+  - Environment & Hardware audit (RTX 5060 8GB VRAM with ~6.1GB free, Ryzen 7 8745HX, 32GB RAM).
+  - Selected `qwen3:8b` (Q4_K_M) as primary reasoning model and `nomic-embed-text` as embedding model.
+  - Authored `docs/ARCHITECTURE.md`, `docs/TECH_STACK.md`, `docs/DATABASE_DESIGN.md`, `docs/DEVELOPMENT_ROADMAP.md`, and 5 ADRs.
+  - Incorporated user feedback: in-container Ollama `/api/ps` VRAM monitoring, `OLLAMA_HOST=0.0.0.0` networking guide in `docs/TROUBLESHOOTING.md`, and default SearXNG metasearch container in `docs/RESEARCH_AGENT.md`.
+
+### Phase 1: Foundation (Completed)
+- **Status**: `COMPLETED (AWAITING APPROVAL FOR PHASE 2)`
+- **Timestamp**: 2026-11-14
+- **What Was Done**:
+  - **Infrastructure Configuration**:
+    - Created `.env.example` and local `.env` with full configuration templates.
+    - Configured `docker-compose.yml` for `pgvector/pgvector:pg16`, `redis:7-alpine`, `searxng/searxng:latest`, backend, and frontend.
+    - Created `Makefile` with targets (`up`, `down`, `migrate`, `test`, `lint`, `dev`, `clean`).
+    - Configured `infrastructure/searxng/settings.yml` with privacy-preserving engines (DuckDuckGo, Wikipedia, Wikidata, Qwant).
+  - **Backend Implementation (`backend/`)**:
+    - FastAPI application factory in `app/main.py` with request ID middleware, timing headers, CORS, and structured error handling.
+    - Pydantic Settings in `app/core/config.py`.
+    - Structured JSON logging in `app/core/logging.py`.
+    - Bcrypt password hashing and PyJWT token generation/validation in `app/core/security.py`.
+    - Async SQLAlchemy 2 session factory in `app/database/session.py`.
+    - Full relational data models in `app/models/` (`User`, `ResearchSession`, `Source`, `Document`, `DocumentChunk`, `Report`, `AgentRun`, `Approval`).
+    - Pydantic v2 schemas in `app/schemas/` (`UserRegister`, `UserLogin`, `UserResponse`, `Token`, `HealthResponse`, `ReadyResponse`).
+    - API v1 routes in `app/api/v1/`:
+      - `/health`: Liveness probe returning HTTP 200 `{"status": "ok"}`.
+      - `/ready`: Readiness probe inspecting PostgreSQL, Redis, and host Ollama via `/api/tags` and `/api/ps`, reporting `healthy`, `degraded`, or `unhealthy`.
+      - `/auth/register`: User registration with email uniqueness and hashed passwords.
+      - `/auth/login`: User authentication returning JWT Bearer token.
+      - `/auth/me`: Protected profile endpoint requiring valid JWT token.
+    - Alembic migration `001_initial_schema` with `CREATE EXTENSION IF NOT EXISTS vector;`, all 8 tables, foreign keys, and HNSW index.
+  - **Frontend Implementation (`frontend/`)**:
+    - Next.js 14+ App Router shell with strict TypeScript (`"strict": true`).
+    - Tailwind CSS dark SaaS aesthetic with Emerald accent.
+    - Typed API client in `src/lib/api.ts` with JWT authentication storage.
+    - Landing page at `/`, authentication forms at `/login` and `/register`, and workspace shell at `/dashboard`.
+    - Multi-stage Dockerfile for standalone Next.js deployment.
+  - **Empirical Acceptance Criteria Verification**:
+    - Criterion 1: Frontend starts -> PASS (HTTP 200 on `http://localhost:3000`, `/login`, `/register`).
+    - Criterion 2: Backend starts -> PASS (HTTP 200 on `http://127.0.0.1:8000/api/v1/health`).
+    - Criterion 3: Postgres connects -> PASS (`researchpilot-postgres` container healthy on port 5432).
+    - Criterion 4: Migration runs -> PASS (Alembic upgraded `001_initial_schema`, 8 domain tables verified via `\dt`).
+    - Criterion 5: `/ready` reports accurate status incl. Ollama down case -> PASS (Live check healthy; integration test verifies degraded status on Ollama unreachable).
+    - Criterion 6: Compose brings up infra -> PASS (`docker compose ps` shows postgres, redis, and searxng healthy).
+    - Criterion 7: Auth register/login works -> PASS (Live register, login, and `/me` verified over HTTP).
+    - Criterion 8: All tests pass -> PASS (15/15 unit and integration tests passing in 2.40s).
 - **Fixes & Hardening Applied**:
-  - Removed container-level GPU driver dependencies by using Ollama HTTP telemetry.
-  - Added firewall hardening guidance for Ollama `0.0.0.0` LAN exposure.
-  - Provided free local search fallback via SearXNG.
+  - Resolved `sqlalchemy[asyncio]` greenlet dependency requirement.
+  - Added `email-validator` for Pydantic `EmailStr` field validation.
+  - Refactored `httpx.AsyncClient` test mocks to selectively intercept Ollama port 11434 without colliding with test client transport.
+  - Fixed Starlette `add_exception_handler` type compatibility in `app/core/errors.py`.
+  - Cleaned all Ruff linting errors and achieved 100% clean Mypy type-checking across 23 source files.
 
 ---
 
@@ -71,9 +89,9 @@ This document tracks all project milestones, completed tasks, implemented featur
 | Phase | Description | Status |
 |---|---|---|
 | **Prompt 0** | Bootstrap (Rules, Skills, Workflows) | **COMPLETED** |
-| **Phase 0** | System Analysis, Hardware Audit & Architecture | **COMPLETED (AWAITING CONFIRMATION)** |
-| **Phase 1** | Foundation (FastAPI Skeleton, Next.js Shell, Docker Compose) | NEXT UP |
-| **Phase 2** | LLM Infrastructure (Ollama Provider, Structured JSON, Semaphore) | PENDING |
+| **Phase 0** | System Analysis, Hardware Audit & Architecture | **COMPLETED** |
+| **Phase 1** | Foundation (FastAPI Skeleton, Next.js Shell, Docker Compose) | **COMPLETED (AWAITING APPROVAL)** |
+| **Phase 2** | LLM Infrastructure (Ollama Provider, Structured JSON, Semaphore) | NEXT UP |
 | **Phase 3** | Research Agent (Search Provider, PyMuPDF, SSRF Defense) | PENDING |
 | **Phase 4** | Multi-Agent Orchestration (LangGraph, State Machine, Review Loop) | PENDING |
 | **Phase 5** | RAG and Memory (pgvector, HNSW, Ingestion, Citation Verification) | PENDING |

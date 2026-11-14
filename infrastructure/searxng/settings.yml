@@ -1,0 +1,38 @@
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "ResearchPilot SearXNG"
+
+server:
+  port: 8080
+  bind_address: "0.0.0.0"
+  secret_key: "researchpilot-searxng-local-insecure-key-change-in-prod"
+  limiter: false
+  image_proxy: false
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: "en"
+  formats:
+    - html
+    - json
+
+engines:
+  - name: duckduckgo
+    engine: duckduckgo
+    shortcut: ddg
+    timeout: 3.0
+  - name: wikipedia
+    engine: wikipedia
+    shortcut: wp
+    timeout: 3.0
+  - name: wikidata
+    engine: wikidata
+    shortcut: wd
+    timeout: 3.0
+  - name: qwant
+    engine: qwant
+    shortcut: qw
+    timeout: 3.0
