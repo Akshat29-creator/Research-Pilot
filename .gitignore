@@ -40,7 +40,8 @@ htmlcov/
 coverage.xml
 *.cover
 
-# Node / Next.js
+# Browser Automation Profiles
+.chrome_*/
 node_modules/
 .next/
 out/

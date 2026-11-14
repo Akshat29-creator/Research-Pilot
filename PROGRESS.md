@@ -5,7 +5,7 @@ This document tracks all project milestones, completed tasks, implemented featur
 ---
 
 ## Current Status Overview
-- **Active Track**: Frontend Redesign (Premium SaaS Interface) — Stage 4 Screen 2 (Dashboard) Completed, Ready for Screen 3 (Research Workspace)
+- **Active Track**: Frontend Redesign (Premium SaaS Interface) — Stage 4 Screen 3 (Research Workspace) Completed, Ready for Screen 4 (Agent Trace)
 - **Repository**: `https://github.com/Akshat29-creator/Research-Pilot.git`
 - **Branch**: `main`
 - **Target Hardware**: Lenovo Legion Pro 5 | AMD Ryzen 7 8745HX | RTX 5060 Laptop GPU (8GB VRAM) | Windows 11 + WSL2
@@ -139,6 +139,18 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Verified strict TypeScript compilation with zero errors (`tsc --noEmit`).
     - Captured high-fidelity desktop (1440px) and mobile (390px) screenshots saved in `docs/screenshots/dashboard-redesign-*.png`.
     - Created Stage 4 Screen 2 review artifact `stage_4_screen_2_dashboard_review.md`.
+  - **Stage 4: Screen 3 — Research Workspace Redesign (Completed)**:
+    - Built the flagship 3-panel Research Workspace at `frontend/src/app/(app)/research/[id]/page.tsx`.
+    - Created `frontend/src/components/research/agent-node.tsx` with role descriptions, latency badges, retry counts, token velocities, and review loop counters.
+    - Created `frontend/src/components/research/agent-graph.tsx` with interactive React Flow canvas (`Orchestrator` -> `Research` -> `Analysis` -> `Writer` -> `Reviewer`), animated edges, and dashed feedback revision loop edge.
+    - Created `frontend/src/components/research/streaming-feed.tsx` with terminal aesthetic, live SSE updates, token velocity (`tok/s`), tool tags (`SearXNG`, `pgvector`), payload inspection modal, and auto-scroll follow toggle.
+    - Created `frontend/src/components/research/sources-drawer.tsx` with category tabs (`All`, `Academic`, `Web`, `Deduped`), search input, `SourceCard` list, credibility metrics, and full excerpt inspection dialog.
+    - Created `frontend/src/components/research/approval-modal.tsx` with keyboard navigation (`Enter` to Approve, `Esc` to Reject), flagged claim preview, reviewer audit rationale, and loop iteration indicator.
+    - Implemented mobile (390px) responsive segmented switcher between `Graph & Stream`, `Plan (5)`, and `Sources (6)` with zero layout clipping.
+    - Added unit test suite in `frontend/tests/components/research.test.tsx` (all 7 vitest unit tests passing).
+    - Verified strict TypeScript compilation (`tsc --noEmit` -> 0 errors) and production build (`next build` -> 14/14 routes compiled).
+    - Captured high-fidelity desktop (1440px), approval modal, and mobile (390px) screenshots in `docs/screenshots/workspace-redesign-*.png`.
+    - Created Stage 4 Screen 3 review artifact `stage_4_screen_3_workspace_review.md`.
 
 ---
 
