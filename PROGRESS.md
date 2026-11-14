@@ -5,7 +5,7 @@ This document tracks all project milestones, completed tasks, implemented featur
 ---
 
 ## Current Status Overview
-- **Active Track**: Frontend Redesign (Premium SaaS Interface) — Stage 4 Screen 7 (Observability) Completed, Ready for Screen 8 (Settings)
+- **Active Track**: Frontend Redesign (Premium SaaS Interface) — Stage 4 Screen 8 (Settings) Completed, Ready for Screen 9 (Auth Pages)
 - **Repository**: `https://github.com/Akshat29-creator/Research-Pilot.git`
 - **Branch**: `main`
 - **Target Hardware**: Lenovo Legion Pro 5 | AMD Ryzen 7 8745HX | RTX 5060 Laptop GPU (8GB VRAM) | Windows 11 + WSL2
@@ -197,6 +197,18 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Verified strict TypeScript compilation (`tsc --noEmit` -> 0 errors) and Next.js production build (`next build` -> 14/14 routes).
     - Captured high-fidelity desktop (1440px), agent stages breakdown, bottom infrastructure scroll, and mobile (390px) screenshots in `docs/screenshots/observability-redesign-*.png`.
     - Created Stage 4 Screen 7 review artifact `stage_4_screen_7_observability_review.md`.
+
+  - **Stage 4: Screen 8 — Settings (`/settings`) (Completed)**:
+    - Redesigned and implemented workstation configuration cockpit with strict host hardware constraints and real-time telemetry.
+    - Built `VramEstimatorCard` computing dynamic VRAM footprint based on selected model (Qwen-3-8B 5.2GB, Llama-3.2-3B 2.0GB, Mistral-7B 4.4GB), nomic-embed-text (274MB), and KV cache size.
+    - Implemented hardware capacity spillover warning: moving context window slider beyond 4,096 tokens (e.g. to 8,192 tokens) triggers an immediate amber/red alert warning that total memory reaches 6,408 MiB and exceeds the 6.1 GB safe headroom on the 8 GB RTX 5060 Laptop GPU.
+    - Built `SearchProviderSection` for local SearXNG container (:8080) with live connectivity ping tester (`Connected • 18ms`), cluster engine toggles (Google, Bing, ArXiv, Wikipedia, Europe PMC), and retrieval limit slider (3 to 15 sources).
+    - Built `AgentGuardrailsSection` for adversarial reviewer strictness (`Strict 90%+ grounding`), human approval pause modes, and customizable research system prompt with character counter and default reset.
+    - Built `DatabaseStorageSection` with pgvector counters (12 dossiers, 172 chunks, 8.4 MB vector tables, 14.2 MB Redis cache), backup archive `.json` exporter, cache flushing, and guarded `DangerPurgeDialog` requiring `DELETE-ALL-DATA` typed confirmation.
+    - Added unit test suite in `frontend/tests/components/settings.test.tsx` (all 27 vitest unit tests passing across 7 suites).
+    - Verified strict TypeScript compilation (`tsc --noEmit` -> 0 errors) and Next.js production build (`next build` -> 14/14 routes).
+    - Captured high-fidelity desktop (1440px), 8192 token warning alert, purge confirmation dialog, bottom storage scroll, and mobile (390px) screenshots in `docs/screenshots/settings-redesign-*.png`.
+    - Created Stage 4 Screen 8 review artifact `stage_4_screen_8_settings_review.md`.
 
 ---
 

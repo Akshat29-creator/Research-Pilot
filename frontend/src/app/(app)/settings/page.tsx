@@ -1,10 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { Check, Cpu, Moon, Save, Search, Shield, Sun } from "lucide-react";
+import {
+  Cpu,
+  Database,
+  Moon,
+  Save,
+  Search,
+  ShieldCheck,
+  Sun,
+  Sliders,
+  Laptop,
+  CheckCircle2,
+  Lock,
+} from "lucide-react";
 import { useTheme } from "next-themes";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -12,151 +25,307 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { VramEstimatorCard } from "@/components/settings/vram-estimator-card";
+import { SearchProviderSection } from "@/components/settings/search-provider-section";
+import { AgentGuardrailsSection } from "@/components/settings/agent-guardrails-section";
+import { DatabaseStorageSection } from "@/components/settings/database-storage-section";
+
+const DEFAULT_SYSTEM_PROMPT = `You are ResearchPilot AI, an autonomous local-first research workstation.
+You strictly adhere to evidence-based synthesis.
+Every substantive factual statement must carry an academic citation [1] linked to an indexed source chunk in pgvector.
+Never invent non-existent DOIs, authors, or empirical claims.
+If evidence is insufficient, explicitly state research limitations.`;
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
+
+  // Settings State
   const [model, setModel] = React.useState("qwen3:8b");
-  const [contextLen, setContextLen] = React.useState("4096");
+  const [contextLen, setContextLen] = React.useState<number>(4096);
+  const [temperature, setTemperature] = React.useState<number>(0.2);
   const [searchProvider, setSearchProvider] = React.useState("searxng");
+  const [maxResults, setMaxResults] = React.useState<number>(8);
+  const [engines, setEngines] = React.useState<string[]>([
+    "google",
+    "arxiv",
+    "wikipedia",
+    "europe_pmc",
+  ]);
+  const [reviewStrictness, setReviewStrictness] = React.useState("strict");
+  const [approvalMode, setApprovalMode] = React.useState("always_pause");
+  const [systemPrompt, setSystemPrompt] = React.useState(DEFAULT_SYSTEM_PROMPT);
+  const [isSaved, setIsSaved] = React.useState(false);
+
+  // Load from localStorage if present
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("researchpilot_settings");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.model) setModel(parsed.model);
+        if (parsed.contextLen) setContextLen(parsed.contextLen);
+        if (parsed.temperature !== undefined) setTemperature(parsed.temperature);
+        if (parsed.searchProvider) setSearchProvider(parsed.searchProvider);
+        if (parsed.maxResults) setMaxResults(parsed.maxResults);
+        if (parsed.engines) setEngines(parsed.engines);
+        if (parsed.reviewStrictness) setReviewStrictness(parsed.reviewStrictness);
+        if (parsed.approvalMode) setApprovalMode(parsed.approvalMode);
+        if (parsed.systemPrompt) setSystemPrompt(parsed.systemPrompt);
+      }
+    } catch {}
+  }, []);
+
+  const handleToggleEngine = (engineId: string) => {
+    setEngines((prev) =>
+      prev.includes(engineId) ? prev.filter((e) => e !== engineId) : [...prev, engineId]
+    );
+  };
+
+  const handleResetPrompt = () => {
+    setSystemPrompt(DEFAULT_SYSTEM_PROMPT);
+    toast.info("System instructions reset to academic research default");
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Workspace configuration updated successfully");
+    const config = {
+      model,
+      contextLen,
+      temperature,
+      searchProvider,
+      maxResults,
+      engines,
+      reviewStrictness,
+      approvalMode,
+      systemPrompt,
+      updatedAt: new Date().toISOString(),
+    };
+    try {
+      localStorage.setItem("researchpilot_settings", JSON.stringify(config));
+      setIsSaved(true);
+      toast.success("Workspace configuration saved successfully");
+      setTimeout(() => setIsSaved(false), 2500);
+    } catch {
+      toast.error("Failed to save settings to localStorage");
+    }
   };
 
   return (
-    <div className="p-6 sm:p-8 max-w-4xl mx-auto space-y-6">
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <Badge variant="outline" className="font-mono text-[10px]">
-            CONFIGURATION
-          </Badge>
-          <span className="text-xs text-muted-foreground font-mono">Environment &amp; Hardware</span>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Badge variant="outline" className="font-mono text-[10px] text-primary border-primary/30">
+              WORKSPACE CONFIGURATION
+            </Badge>
+            <span className="text-xs text-muted-foreground font-mono">
+              Hardware Limits &amp; Parameters
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+            Settings &amp; Hardware Constraints
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5 max-w-2xl">
+            Tune on-device LLM inference parameters, safe VRAM context ceilings, local SearXNG routing,
+            and database storage.
+          </p>
         </div>
-        <h1 className="text-xl font-bold tracking-tight text-foreground">
-          Workspace &amp; Model Settings
-        </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Tune on-device inference parameters, search provider routing, and interface preferences.
-        </p>
+
+        {/* Global Save Button */}
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            onClick={handleSave}
+            className="font-mono text-xs gap-1.5 h-9 bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            {isSaved ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
+            <span>{isSaved ? "Saved" : "Save Changes"}</span>
+          </Button>
+        </div>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* Section 1: LLM Inference Hardware */}
-        <div className="rounded-xl border border-border bg-surface p-6 shadow-sm space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <Cpu className="h-4 w-4 text-primary" /> On-Device LLM Provider (Ollama)
-          </h3>
+        <div className="rounded-xl border border-border bg-surface p-5 shadow-sm space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-surface-raised border border-border text-primary">
+                <Cpu className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground tracking-tight">
+                  Local Inference Engine (Host Ollama)
+                </h3>
+                <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                  100% On-device execution on NVIDIA GeForce RTX 5060 Laptop (8,151 MiB VRAM)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 font-mono text-[11px] text-emerald-400">
+              <Lock className="h-3 w-3" />
+              <span>Concurrency Lock: Semaphore(1)</span>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Model Selection */}
             <div>
               <label className="block text-xs font-medium text-foreground mb-1.5">
-                Primary Reasoning Model
+                Primary Reasoning &amp; Synthesis Model
               </label>
               <Select value={model} onValueChange={setModel}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select model" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="qwen3:8b">Qwen3:8B (Q4_K_M, 5.2GB) • Recommended</SelectItem>
-                  <SelectItem value="llama3.2:3b">Llama3.2:3B (Q4_K_M, 2.0GB) • Ultralight</SelectItem>
-                  <SelectItem value="mistral:7b">Mistral:7B (Q4_K_M, 4.4GB)</SelectItem>
+                  <SelectItem value="qwen3:8b">
+                    Qwen3:8B (Q4_K_M, 5.2GB) • Recommended
+                  </SelectItem>
+                  <SelectItem value="llama3.2:3b">
+                    Llama-3.2:3B (Q4_K_M, 2.0GB) • Ultralight
+                  </SelectItem>
+                  <SelectItem value="mistral:7b">
+                    Mistral:7B (Q4_K_M, 4.4GB) • Generalist
+                  </SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Runs entirely locally on your RTX 5060 Laptop GPU.
+              <p className="text-[11px] text-muted-foreground mt-1 font-mono">
+                Model weights load entirely into host GPU memory (33/33 CUDA layers).
               </p>
             </div>
 
+            {/* Context Length Slider / Ceiling */}
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
-                Context Window Token Ceiling (`num_ctx`)
-              </label>
-              <Select value={contextLen} onValueChange={setContextLen}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select context length" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2048">2,048 tokens (Ultra-low VRAM)</SelectItem>
-                  <SelectItem value="4096">4,096 tokens (Safe Default for 8GB GPU)</SelectItem>
-                  <SelectItem value="8192">8,192 tokens (Warning: High VRAM risk)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-[10px] text-muted-foreground mt-1">
-                4,096 tokens fits comfortably within 5.5GB VRAM allocation.
-              </p>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium text-foreground">
+                  Context Window Ceiling (`num_ctx`)
+                </label>
+                <span className="font-mono text-xs font-bold text-primary tabular-nums">
+                  {contextLen.toLocaleString()} tokens
+                </span>
+              </div>
+              <input
+                type="range"
+                min={2048}
+                max={8192}
+                step={1024}
+                value={contextLen}
+                onChange={(e) => setContextLen(Number(e.target.value))}
+                className="w-full h-2 bg-surface-raised rounded-lg appearance-none cursor-pointer accent-primary border border-border"
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground font-mono mt-1">
+                <span>2,048 (Low VRAM)</span>
+                <span className="text-emerald-400 font-semibold">4,096 (Safe Envelope)</span>
+                <span className="text-amber-400">8,192 (Spill Risk)</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Section 2: Search Engine */}
-        <div className="rounded-xl border border-border bg-surface p-6 shadow-sm space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <Search className="h-4 w-4 text-primary" /> Search Provider
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
-                Metasearch Provider
-              </label>
-              <Select value={searchProvider} onValueChange={setSearchProvider}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select search provider" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="searxng">SearXNG (Local Docker Container) • Zero Cost</SelectItem>
-                  <SelectItem value="tavily" disabled>Tavily (API Key Required)</SelectItem>
-                  <SelectItem value="brave" disabled>Brave Search (API Key Required)</SelectItem>
-                </SelectContent>
-              </Select>
+          {/* Temperature Slider */}
+          <div className="space-y-2 pt-2 border-t border-border/80">
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="font-medium text-foreground">
+                Inference Temperature (Determinism vs Creativity):
+              </span>
+              <span className="font-bold text-foreground tabular-nums">{temperature.toFixed(2)}</span>
             </div>
-
-            <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
-                SearXNG Host Endpoint
-              </label>
-              <Input defaultValue="http://searxng:8080" readOnly className="font-mono text-xs bg-surface-raised" />
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Aggregates DuckDuckGo, Wikipedia, and Qwant without tracking.
-              </p>
+            <input
+              type="range"
+              min={0.0}
+              max={1.0}
+              step={0.05}
+              value={temperature}
+              onChange={(e) => setTemperature(Number(e.target.value))}
+              className="w-full h-2 bg-surface-raised rounded-lg appearance-none cursor-pointer accent-primary border border-border"
+            />
+            <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+              <span>0.00 (Strictly Factual / Deterministic)</span>
+              <span>0.20 (Recommended for Research)</span>
+              <span>1.00 (High Temperature)</span>
             </div>
           </div>
+
+          {/* Live Dynamic VRAM Projection Card */}
+          <VramEstimatorCard model={model} contextLen={contextLen} />
         </div>
 
-        {/* Section 3: Interface Theme */}
-        <div className="rounded-xl border border-border bg-surface p-6 shadow-sm space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <Shield className="h-4 w-4 text-primary" /> Appearance &amp; Accessibility
-          </h3>
+        {/* Section 2: Search Provider */}
+        <SearchProviderSection
+          provider={searchProvider}
+          onProviderChange={setSearchProvider}
+          maxResults={maxResults}
+          onMaxResultsChange={setMaxResults}
+          engines={engines}
+          onToggleEngine={handleToggleEngine}
+        />
 
-          <div className="flex items-center gap-3">
+        {/* Section 3: Agent Guardrails & System Instructions */}
+        <AgentGuardrailsSection
+          strictness={reviewStrictness}
+          onStrictnessChange={setReviewStrictness}
+          approvalMode={approvalMode}
+          onApprovalModeChange={setApprovalMode}
+          systemPrompt={systemPrompt}
+          onSystemPromptChange={setSystemPrompt}
+          onResetPrompt={handleResetPrompt}
+        />
+
+        {/* Section 4: Local Database & Storage */}
+        <DatabaseStorageSection />
+
+        {/* Section 5: Interface Appearance */}
+        <div className="rounded-xl border border-border bg-surface p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-border">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-surface-raised border border-border text-primary">
+                <Sliders className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground tracking-tight">
+                  Interface &amp; Display Preferences
+                </h3>
+                <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                  Visual theme and layout density settings
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               type="button"
               variant={theme === "dark" ? "default" : "outline"}
               size="sm"
               onClick={() => setTheme("dark")}
-              className="gap-2"
+              className="gap-2 font-mono text-xs"
             >
-              <Moon className="h-3.5 w-3.5" /> Dark Theme (Default)
+              <Moon className="h-3.5 w-3.5" /> Dark Theme (Workstation Default)
             </Button>
             <Button
               type="button"
               variant={theme === "light" ? "default" : "outline"}
               size="sm"
               onClick={() => setTheme("light")}
-              className="gap-2"
+              className="gap-2 font-mono text-xs"
             >
               <Sun className="h-3.5 w-3.5" /> Light Theme
             </Button>
           </div>
         </div>
 
-        <div className="flex justify-end">
-          <Button type="submit" className="gap-1.5">
-            <Save className="h-3.5 w-3.5" /> Save Configuration
+        {/* Bottom Save Action */}
+        <div className="flex items-center justify-between pt-2">
+          <div className="text-xs font-mono text-muted-foreground">
+            Configuration saved locally in browser storage.
+          </div>
+          <Button
+            type="submit"
+            className="font-mono text-xs gap-1.5 h-10 px-6 bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <Save className="h-3.5 w-3.5" />
+            <span>Save All Changes</span>
           </Button>
         </div>
       </form>
