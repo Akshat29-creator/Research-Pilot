@@ -5,7 +5,7 @@ This document tracks all project milestones, completed tasks, implemented featur
 ---
 
 ## Current Status Overview
-- **Active Track**: Frontend Redesign (Premium SaaS Interface) — Stage 3 Completed, Ready for Stage 4 (Screens Implementation)
+- **Active Track**: Frontend Redesign (Premium SaaS Interface) — Stage 4 Screen 1 (Landing Page) Completed, Ready for Screen 2 (Dashboard)
 - **Repository**: `https://github.com/Akshat29-creator/Research-Pilot.git`
 - **Branch**: `main`
 - **Target Hardware**: Lenovo Legion Pro 5 | AMD Ryzen 7 8745HX | RTX 5060 Laptop GPU (8GB VRAM) | Windows 11 + WSL2
@@ -118,6 +118,17 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Created clean routed pages for `/dashboard`, `/research/new`, `/history`, `/documents`, `/observability`, and `/settings`.
     - Captured high-fidelity desktop and mobile screenshots saved in `docs/screenshots/*-shell-*.png`.
     - Created Stage 3 review artifact `stage_3_app_shell_review.md`.
+  - **Stage 4: Screen 1 — Landing Page Redesign (Completed)**:
+    - Completely redesigned `frontend/src/app/page.tsx` with a left-anchored, high-contrast hero and zero AI novelty gimmicks.
+    - Added an active research prompt input form with `↵` Enter shortcut and automatic query transfer to `/dashboard?q=...`.
+    - Added 4 interactive benchmark prompt chips (HNSW vs IVFFlat, LangGraph bounded review loop, Qwen3:8B quantization loss, RRF reranking) that populate and submit on click.
+    - Authored custom, publication-grade SVG diagram illustrating the 5-node LangGraph sequential pipeline (`Orchestrator` $\rightarrow$ `Research` $\rightarrow$ `Analysis` $\rightarrow$ `Writer` $\rightarrow$ `Reviewer`) with bounded revision loop arrows.
+    - Implemented 3-step methodology walkthrough (*Autonomous Decomposition*, *Hybrid Evidence Retrieval*, *Adversarial Grounding Audit*).
+    - Added 4-card technical architecture matrix covering on-device execution, cryptographic citations, unified PostgreSQL 16 + pgvector storage, and human review gates.
+    - Integrated live hardware status pill (`● RTX 5060 • Local`) and theme toggle in navigation bar.
+    - Verified strict TypeScript compilation with zero errors (`tsc --noEmit`).
+    - Captured high-fidelity desktop (1440px) and mobile (390px) screenshots saved in `docs/screenshots/landing-redesign-*.png`.
+    - Created Stage 4 Screen 1 review artifact `stage_4_screen_1_landing_review.md`.
 
 ---
 
