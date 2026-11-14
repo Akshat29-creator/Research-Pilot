@@ -16,6 +16,12 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-4">
             <Link
+              href="/dev/components"
+              className="text-xs font-mono px-2.5 py-1 rounded border border-zinc-700 bg-zinc-800/60 text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors"
+            >
+              UI Components
+            </Link>
+            <Link
               href="/login"
               className="text-sm font-medium text-zinc-400 hover:text-white transition-colors"
             >

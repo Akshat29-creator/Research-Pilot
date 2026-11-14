@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useTheme } from "next-themes";
 import {
   Activity,
   AlertTriangle,
+  ArrowLeft,
   ArrowRight,
   BookOpen,
   Bot,
@@ -264,6 +266,18 @@ export default function DevComponentsPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+            >
+              <Link href="/">
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Back to App</span>
+              </Link>
+            </Button>
+
             <Button
               variant="outline"
               size="sm"
