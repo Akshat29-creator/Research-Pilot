@@ -282,6 +282,37 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Total backend test suite: **65 / 65 tests passing in 18.25s**.
     - Ruff and Mypy passing with **zero errors and zero warnings**.
 
+### Phase 4: Multi-Agent Orchestration (Completed)
+- **Status**: `COMPLETED`
+- **Timestamp**: 2026-11-15
+- **What Was Done**:
+  - **State Machine Definition (`backend/app/workflows/state.py`)**:
+    - Created `ResearchWorkflowState(TypedDict)` holding session/execution identifiers, query, sub-queries, 3-step investigation plan, raw sources, grounded evidence chunks, structured analysis, draft report, adversarial feedback, revision iterations (`iteration_count`, `max_iterations`), workflow status, errors, and per-node hardware execution timings.
+    - Authored `create_initial_state()` factory with sane defaults and configurable constraints.
+  - **Conditional Routing (`backend/app/workflows/router.py`)**:
+    - Built `route_after_review()` determining next state: transitions to `"final_report"` if adversarial grounding review passed or if `iteration_count >= max_iterations`; otherwise routes back to `"writer"` for targeted revision.
+  - **Multi-Agent Node Network (`backend/app/workflows/nodes/`)**:
+    - `orchestrator_node`: Decomposes query into a 3-step investigation plan and 2-3 focused search queries with fallback heuristic planning.
+    - `researcher_node`: Executes search queries using `get_search_provider()`, filters URLs through SSRF-safe retrieval (`safe_fetch_url()`), extracts clean content (`extract_web_content()`), and deduplicates sources.
+    - `analyst_node`: Synthesizes gathered evidence under strict XML prompt isolation boundaries into `AnalysisSchema` (key findings with source IDs, consensus points, contradictions, and unresolved questions).
+    - `writer_node`: Authors academic-grade Markdown research dossiers with inline footnote citations `[^N]`, incorporating reviewer critiques on revision cycles.
+    - `reviewer_node`: Acts as an adversarial fact-checker, auditing report claims against source evidence, computing factual grounding score (0.0 to 1.0), and incrementing `iteration_count`.
+    - `final_report_node`: Compiles publication-ready Markdown dossier adorned with an Adversarial Grounding Audit badge (green passed note or amber human verification warning).
+  - **Graph Construction & Execution Engine (`backend/app/workflows/builder.py`, `runner.py`)**:
+    - `build_research_graph()`: Assembles the 6-node LangGraph `StateGraph` with START -> orchestrator -> researcher -> analyst -> writer -> reviewer, conditional edge `route_after_review`, and reviewer/writer revision loop.
+    - `compile_research_workflow()`: Compiles graph with optional persistence checkpointer (`MemorySaver` or `PostgresSaver`).
+    - `run_research_workflow()`: Executes the compiled graph asynchronously end-to-end.
+    - `stream_research_workflow()`: Asynchronously yields progressive node-by-node state updates for real-time frontend SSE streaming.
+  - **Testing & Verification**:
+    - 12 unit tests across `test_workflow_state.py`, `test_workflow_router.py`, and `test_workflow_nodes.py`.
+    - 3 integration tests in `test_langgraph_workflow.py` executing:
+      1. Full end-to-end graph execution with live Ollama `qwen3:8b` inference on NVIDIA GeForce RTX 5060 Laptop GPU.
+      2. Progressive event streaming through all 6 node events.
+      3. Adversarial revision loop strictly terminating at `max_iterations=2` without infinite looping.
+    - Total Phase 4 test suite: **15 / 15 tests passed** (4m39s with full live GPU inference).
+    - Full backend unit test suite: **62 / 62 tests passed in 3.53s**.
+    - Ruff and Mypy passing with **zero errors and zero warnings** across all 12 workflow files.
+
 ---
 
 ## Roadmap & Next Phases
@@ -293,9 +324,8 @@ This document tracks all project milestones, completed tasks, implemented featur
 | **Phase 1** | Foundation (FastAPI Skeleton, Next.js Shell, Docker Compose) | **COMPLETED** |
 | **Phase 2** | LLM Infrastructure (Ollama Provider, Structured JSON, Semaphore) | **COMPLETED** |
 | **Phase 3** | Research Agent (Search Provider, PyMuPDF, SSRF Defense) | **COMPLETED** |
-| **Phase 4** | Multi-Agent Orchestration (LangGraph, State Machine, Review Loop) | NEXT UP |
-| **Phase 4** | Multi-Agent Orchestration (LangGraph, State Machine, Review Loop) | PENDING |
-| **Phase 5** | RAG and Memory (pgvector, HNSW, Ingestion, Citation Verification) | PENDING |
+| **Phase 4** | Multi-Agent Orchestration (LangGraph, State Machine, Review Loop) | **COMPLETED** |
+| **Phase 5** | RAG and Memory (pgvector, HNSW, Ingestion, Citation Verification) | NEXT UP |
 | **Phase 5B**| Hybrid Search and Reranking (tsvector + pgvector via RRF) | PENDING |
 | **Phase 6** | MCP, Approvals, Resilience (Interrupts, Checkpointer Recovery) | PENDING |
 | **Phase 7** | Frontend (Next.js App Router, SSE Stream, Dark SaaS UI) | PENDING |

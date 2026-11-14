@@ -32,6 +32,8 @@ dependencies = [
     "langchain-core>=0.2.0",
     "pymupdf>=2.1",
     "beautifulsoup4>=4.15.0",
+    "langgraph-checkpoint-postgres>=3.2.1",
+    "psycopg[binary]>=3.3.9",
 ]
 
 [project.optional-dependencies]
