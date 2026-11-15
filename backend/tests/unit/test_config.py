@@ -6,8 +6,8 @@ def test_default_settings():
     assert test_settings.PROJECT_NAME == "ResearchPilot AI"
     assert test_settings.ENVIRONMENT in ["development", "testing", "production"]
     assert test_settings.JWT_ALGORITHM == "HS256"
-    assert test_settings.VRAM_WARN_THRESHOLD_MB == 5500
-    assert test_settings.PRIMARY_MODEL == "qwen3:8b"
+    assert test_settings.VRAM_WARN_THRESHOLD_MB == 4000
+    assert test_settings.PRIMARY_MODEL == "qwen2.5:3b"
     assert test_settings.EMBEDDING_MODEL == "nomic-embed-text"
 
 

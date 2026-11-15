@@ -11,7 +11,10 @@ interface VramEstimatorCardProps {
 }
 
 const MODEL_SPECS: Record<string, { name: string; vramMb: number; params: string; quant: string }> = {
+  "qwen2.5:3b": { name: "Qwen2.5:3B", vramMb: 1920, params: "3.1B", quant: "Q4_K_M" },
   "qwen3:8b": { name: "Qwen3:8B", vramMb: 5214, params: "8.2B", quant: "Q4_K_M" },
+  "qwen3.5:2b": { name: "Qwen3.5:2B", vramMb: 2700, params: "2.1B", quant: "Q4_K_M" },
+  "qwen2.5-coder:1.5b": { name: "Qwen2.5-Coder:1.5B", vramMb: 986, params: "1.5B", quant: "Q4_K_M" },
   "llama3.2:3b": { name: "Llama-3.2:3B", vramMb: 2048, params: "3.2B", quant: "Q4_K_M" },
   "mistral:7b": { name: "Mistral:7B", vramMb: 4400, params: "7.2B", quant: "Q4_K_M" },
 };
@@ -21,7 +24,7 @@ const TOTAL_GPU_VRAM_MB = 8151; // RTX 5060 Laptop total
 const USABLE_HEADROOM_MB = 6144; // ~6.0 GB practical budget to prevent OS display driver crash
 
 export function VramEstimatorCard({ model, contextLen }: VramEstimatorCardProps) {
-  const modelSpec = MODEL_SPECS[model] || MODEL_SPECS["qwen3:8b"];
+  const modelSpec = MODEL_SPECS[model] || MODEL_SPECS["qwen2.5:3b"];
 
   // Approximate KV Cache VRAM footprint based on context length:
   // ~0.11 MB per token for 8B models (fp16 KV cache)

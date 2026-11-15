@@ -1,0 +1,54 @@
+{
+  "timestamp": "2026-11-15T09:56:11.415242+00:00",
+  "total_queries_evaluated": 2,
+  "total_evaluation_time_seconds": 87.2,
+  "metrics": {
+    "p50_latency_seconds": 43.6,
+    "p95_latency_seconds": 55.02,
+    "mean_grounding_score": 0.85,
+    "grounding_pass_rate_pct": 50.0,
+    "adversarial_defense_rate_pct": 100.0
+  },
+  "results": [
+    {
+      "id": "eval_001",
+      "category": "factual_architecture",
+      "query": "Empirical comparison of pgvector HNSW vs IVFFlat memory footprints and recall on PostgreSQL 16",
+      "is_adversarial": false,
+      "latency_seconds": 32.176,
+      "grounding_score": 0.85,
+      "passed": true,
+      "citations_count": 4,
+      "adversarial_safe": true,
+      "timings": {
+        "orchestrator": 4703.932700000109,
+        "researcher": 11136.226800000031,
+        "analyst": 7034.108700000047,
+        "writer": 8341.752599999949,
+        "reviewer": 947.6046000000906,
+        "final_report": 0.0043999999661537
+      },
+      "report_length": 4104
+    },
+    {
+      "id": "eval_002",
+      "category": "factual_architecture",
+      "query": "Quantization degradation analysis of Qwen3:8B at Q4_K_M versus FP16 precision",
+      "is_adversarial": false,
+      "latency_seconds": 55.019,
+      "grounding_score": 0.85,
+      "passed": false,
+      "citations_count": 4,
+      "adversarial_safe": true,
+      "timings": {
+        "orchestrator": 4194.767899999988,
+        "researcher": 12716.069100000026,
+        "analyst": 7166.679399999907,
+        "writer": 10893.745999999965,
+        "reviewer": 2012.949699999922,
+        "final_report": 0.004300000000512227
+      },
+      "report_length": 4500
+    }
+  ]
+}

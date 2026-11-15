@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any, Callable, Dict
 
@@ -73,6 +74,8 @@ def timed_agent_node(node_name: str) -> Callable:
                     result = await func(state, *args, **kwargs)
                     if isinstance(result, dict) and "status" in result:
                         span.set_attribute("agent.status", str(result["status"]))
+                    # Thermal safety pacing to prevent GPU thermal saturation on laptops
+                    await asyncio.sleep(0.5)
                     return result
                 except Exception as exc:
                     span.record_exception(exc)

@@ -29,10 +29,10 @@ class Settings(BaseSettings):
 
     # Ollama Host Inference
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    PRIMARY_MODEL: str = "qwen3:8b"
+    PRIMARY_MODEL: str = "qwen2.5:3b"
     EMBEDDING_MODEL: str = "nomic-embed-text"
     LLM_CONTEXT_WINDOW: int = 4096
-    VRAM_WARN_THRESHOLD_MB: int = 5500
+    VRAM_WARN_THRESHOLD_MB: int = 4000
 
     # Search Provider
     SEARCH_PROVIDER: str = "searxng"

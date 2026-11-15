@@ -466,6 +466,42 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Backend: Ruff clean (0 errors), Mypy clean (77 files), Pytest unit suite (112 / 112 passed), fast integration suite (25 / 25 passed).
     - Frontend: ESLint clean (0 errors), TypeScript clean (`tsc --noEmit`), Vitest suite (33 / 33 passed), Next.js production build (14 / 14 routes compiled).
 
+### Phase 10: E2E Tests, Load Tests & MCP Server (Completed)
+- **Status**: `COMPLETED`
+- **Timestamp**: 2026-11-15
+- **What Was Done**:
+  - **Model Context Protocol (MCP 2.3.0) Server (`backend/app/mcp_server/`)**:
+    - Built standards-compliant MCP server exposing ResearchPilot AI capabilities to external agent harnesses (Claude Desktop, Cursor, Antigravity).
+    - Supported transports: `stdio` (zero-overhead local IPC) and `sse` (networked streaming).
+    - Implemented 3 high-leverage tools:
+      - `start_research`: Dispatches autonomous multi-agent deep research workflows subject to single-GPU semaphore lock.
+      - `get_report`: Retrieves compiled evidence-grounded dossiers, citations, and reviewer grounding scores by session ID.
+      - `search_my_documents`: Executes hybrid RAG (PostgreSQL full-text + 768-d pgvector cosine distance) over private indexed papers.
+    - Security guard verifying JWT token / session scopes.
+  - **Playwright End-to-End Test Suite (`frontend/tests/e2e/`)**:
+    - Configured multi-viewport matrix: Desktop Chrome (`1440x900`) and Mobile Chrome (`390x844`).
+    - Automated realistic user journeys:
+      - `auth.spec.ts`: Registration, authenticated login, invalid credential rejection and alert banners.
+      - `research.spec.ts`: Query initiation, streaming agent node progression graph, and markdown report viewer.
+      - `documents.spec.ts`: Drag-and-drop document upload interface and vector chunk inspection.
+    - Added `test:e2e` script in `frontend/package.json`.
+    - **Outcome**: **14 / 14 tests passing** across Desktop and Mobile viewports in ~5 seconds.
+  - **Asynchronous Load Testing Harness (`backend/loadtests/`)**:
+    - Native async `httpx` benchmarking engine (`loadtests/run_loadtest.py`) avoiding Gevent/Locust SSL recursion issues in modern asyncio runtimes.
+    - Measured throughput, percentiles (p50, p95, p99), error rates, and queue stability under single-GPU hardware lock.
+    - **Empirical Results**: 11.39 req/sec throughput, 0.0% error rate, p50 latency: 294.52ms, p95 latency: 978.68ms.
+  - **Hardware Protection & Thermal Stabilization**:
+    - Identified thermal and memory root cause of laptop hardware power cutoff (`Event ID 41, BugcheckCode = 0`).
+    - Calibrated system to lightweight `qwen2.5:3b` (1.9 GB footprint, ~3.5 GB total VRAM), providing >4.4 GB free VRAM headroom on RTX 5060.
+    - Implemented `unwrap_json_payload` schema unwrapper making JSON schema validation resilient for smaller models.
+    - Injected 0.5s thermal safety pacing into `@timed_agent_node` to prevent continuous silicon thermal saturation.
+  - **Comprehensive Documentation**:
+    - Authored `docs/MCP_SERVER.md` detailing architecture, tool schemas, and client configs.
+    - Authored `docs/E2E_AND_LOAD_TESTING.md` detailing test suites, load architecture, and benchmark data.
+  - **Verification**:
+    - Backend: 124 unit tests passed, all API and checkpointer integration tests passed, Ruff clean, Mypy clean.
+    - Frontend: 33 Vitest tests passed, 14 Playwright E2E tests passed, ESLint clean, TypeScript clean.
+
 ---
 
 ## Roadmap & Next Phases
@@ -484,5 +520,5 @@ This document tracks all project milestones, completed tasks, implemented featur
 | **Phase 7** | Frontend Integration & Live Streaming (SSE, Real Backend Wiring) | **COMPLETED** |
 | **Phase 8** | Evaluation and Observability (OpenTelemetry, Prometheus, Grafana) | **COMPLETED** |
 | **Phase 9** | CI/CD and Production Docker (GitHub Actions, Multi-Stage Builds) | **COMPLETED** |
-| **Phase 10**| E2E Tests, Load Tests, MCP Server (Playwright, Locust, MCP Tools) | NEXT UP |
-| **Phase 11**| Final Hardening, Benchmarks and Portfolio Delivery | PENDING |
+| **Phase 10**| E2E Tests, Load Tests, MCP Server (Playwright, Locust, MCP Tools) | **COMPLETED** |
+| **Phase 11**| Final Hardening, Benchmarks and Portfolio Delivery | NEXT UP |

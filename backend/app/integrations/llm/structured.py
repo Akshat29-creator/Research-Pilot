@@ -60,6 +60,26 @@ def extract_json_string(text: str) -> str:
     return candidate
 
 
+def unwrap_json_payload(
+    candidate_json: str, response_model: Type[BaseModel] | None = None
+) -> str:
+    """Unwrap common LLM nesting patterns (e.g. {"properties": {...}} wrappers)."""
+    try:
+        parsed = json.loads(candidate_json)
+        if isinstance(parsed, dict):
+            # If model echoed schema properties
+            if "properties" in parsed and isinstance(parsed["properties"], dict):
+                parsed = parsed["properties"]
+            elif "data" in parsed and isinstance(parsed["data"], dict):
+                parsed = parsed["data"]
+            elif "result" in parsed and isinstance(parsed["result"], dict):
+                parsed = parsed["result"]
+            return json.dumps(parsed)
+    except Exception:
+        pass
+    return candidate_json
+
+
 def format_schema_prompt(response_model: Type[BaseModel]) -> str:
     """Generate prompt directives instructing model to output strictly conforming JSON."""
     schema = response_model.model_json_schema()
@@ -69,6 +89,8 @@ def format_schema_prompt(response_model: Type[BaseModel]) -> str:
         f"\n\nCRITICAL OUTPUT REQUIREMENT:\n"
         f"Format your response as a single valid JSON object strictly conforming to schema:\n"
         f"```json\n{schema_json}\n```\n"
+        f"Important: Place all required fields directly at the root of the JSON object.\n"
+        f"Do NOT nest them inside 'properties', 'definitions', or 'title'.\n"
         f"Do NOT include any commentary, explanations, or thinking blocks outside the JSON."
     )
 
@@ -83,5 +105,6 @@ def format_repair_prompt(raw_text: str, error_msg: str, response_model: Type[Bas
         f"VALIDATION ERROR:\n{error_msg}\n\n"
         f"ORIGINAL INVALID OUTPUT:\n```\n{raw_text[:1000]}\n```\n\n"
         f"REQUIRED JSON SCHEMA:\n```json\n{schema_json}\n```\n\n"
-        f"Please repair the JSON and output ONLY the valid JSON object conforming to schema."
+        f"Please repair the JSON. Place all fields directly at the root of the object.\n"
+        f"Do not wrap inside 'properties'. Output ONLY the valid JSON object."
     )

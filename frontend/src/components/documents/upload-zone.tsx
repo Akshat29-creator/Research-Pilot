@@ -181,6 +181,7 @@ export function UploadZone({ onDocumentIngested, className }: UploadZoneProps) {
 
       {stage === "idle" ? (
         <div
+          data-testid="upload-zone"
           onDragOver={(e) => {
             e.preventDefault();
             setIsDragOver(true);

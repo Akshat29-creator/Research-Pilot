@@ -20,6 +20,7 @@ from app.integrations.llm.structured import (
     format_repair_prompt,
     format_schema_prompt,
     strip_thinking_tags,
+    unwrap_json_payload,
 )
 
 logger = logging.getLogger("researchpilot.llm.ollama")
@@ -65,6 +66,7 @@ class OllamaProvider(LLMProvider):
             "prompt": prompt,
             "stream": False,
             "options": self._get_merged_options(options),
+            "keep_alive": "5m",
         }
         if system:
             payload["system"] = system
@@ -146,7 +148,7 @@ class OllamaProvider(LLMProvider):
         response = await self.generate(
             prompt=prompt, system=full_system, options=generation_options
         )
-        candidate_json = extract_json_string(response.content)
+        candidate_json = unwrap_json_payload(extract_json_string(response.content), response_model)
 
         first_error_msg = ""
         try:
@@ -171,7 +173,9 @@ class OllamaProvider(LLMProvider):
             system="You are a JSON repair specialist. Output ONLY valid JSON conforming to schema.",
             options=generation_options,
         )
-        repair_candidate_json = extract_json_string(repair_response.content)
+        repair_candidate_json = unwrap_json_payload(
+            extract_json_string(repair_response.content), response_model
+        )
 
         try:
             return response_model.model_validate_json(repair_candidate_json)
@@ -200,6 +204,7 @@ class OllamaProvider(LLMProvider):
             "prompt": prompt,
             "stream": True,
             "options": self._get_merged_options(options),
+            "keep_alive": "5m",
         }
         if system:
             payload["system"] = system

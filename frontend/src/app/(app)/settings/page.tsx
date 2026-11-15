@@ -40,7 +40,7 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
 
   // Settings State
-  const [model, setModel] = React.useState("qwen3:8b");
+  const [model, setModel] = React.useState("qwen2.5:3b");
   const [contextLen, setContextLen] = React.useState<number>(4096);
   const [temperature, setTemperature] = React.useState<number>(0.2);
   const [searchProvider, setSearchProvider] = React.useState("searxng");
@@ -180,14 +180,17 @@ export default function SettingsPage() {
                   <SelectValue placeholder="Select model" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="qwen2.5:3b">
+                    Qwen2.5:3B (Q4_K_M, 1.9GB) • Recommended (Ultralight)
+                  </SelectItem>
                   <SelectItem value="qwen3:8b">
-                    Qwen3:8B (Q4_K_M, 5.2GB) • Recommended
+                    Qwen3:8B (Q4_K_M, 5.2GB) • Heavy Reasoning
                   </SelectItem>
-                  <SelectItem value="llama3.2:3b">
-                    Llama-3.2:3B (Q4_K_M, 2.0GB) • Ultralight
+                  <SelectItem value="qwen3.5:2b">
+                    Qwen3.5:2B (Q4_K_M, 2.7GB) • Lightweight
                   </SelectItem>
-                  <SelectItem value="mistral:7b">
-                    Mistral:7B (Q4_K_M, 4.4GB) • Generalist
+                  <SelectItem value="qwen2.5-coder:1.5b">
+                    Qwen2.5-Coder:1.5B (986MB) • Sub-1GB
                   </SelectItem>
                 </SelectContent>
               </Select>
