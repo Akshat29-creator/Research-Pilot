@@ -25,9 +25,10 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/ui/status-dot";
-import { AgentGraph } from "@/components/research/agent-graph";
-import { StreamingFeed, SAMPLE_STREAM_EVENTS, StreamEvent } from "@/components/research/streaming-feed";
-import { SourcesDrawer, SAMPLE_SOURCES } from "@/components/research/sources-drawer";
+import { AgentGraph, AgentNodeRuntimeState } from "@/components/research/agent-graph";
+import { StreamingFeed, StreamEvent } from "@/components/research/streaming-feed";
+import { SourcesDrawer } from "@/components/research/sources-drawer";
+import { SourceCardData } from "@/components/ui/source-card";
 import { ApprovalModal } from "@/components/research/approval-modal";
 import { ErrorState } from "@/components/ui/error-state";
 import { researchApi } from "@/lib/api";
@@ -42,64 +43,68 @@ interface PlanStep {
   details: string;
 }
 
+const DEFAULT_PLAN_STEPS: PlanStep[] = [
+  {
+    id: "step-1",
+    label: "Hypothesis Decomposition",
+    agent: "Orchestrator",
+    status: "running",
+    details: "Decompose inquiry into technical domains and sub-queries.",
+  },
+  {
+    id: "step-2",
+    label: "Multi-Source Retrieval",
+    agent: "Research",
+    status: "pending",
+    details: "Gather empirical evidence across academic and web sources.",
+  },
+  {
+    id: "step-3",
+    label: "Evidence Cross-Examination",
+    agent: "Analysis",
+    status: "pending",
+    details: "Analyze evidence, resolve contradictions, and benchmark claims.",
+  },
+  {
+    id: "step-4",
+    label: "Report Draft Synthesis",
+    agent: "Writer",
+    status: "pending",
+    details: "Compile comprehensive academic report draft with citations.",
+  },
+  {
+    id: "step-5",
+    label: "Adversarial Citation Audit",
+    agent: "Reviewer",
+    status: "pending",
+    details: "Audit citation grounding and verify absence of hallucinations.",
+  },
+];
+
 export default function ResearchWorkspacePage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const sessionId = (params?.id as string) || "sess_01JBM8";
   const queryParam = searchParams.get("q");
 
+  const [queryText, setQueryText] = React.useState(
+    queryParam || "Autonomous Research Investigation"
+  );
   const [activeTab, setActiveTab] = React.useState<"workspace" | "plan" | "sources">("workspace");
-  const [sessionStatus, setSessionStatus] = React.useState<"running" | "paused" | "awaiting_approval" | "completed" | "error">("awaiting_approval");
-  const [activeAgent, setActiveAgent] = React.useState<string>("reviewer");
+  const [sessionStatus, setSessionStatus] = React.useState<
+    "running" | "paused" | "awaiting_approval" | "completed" | "error"
+  >(searchParams.get("stream") === "true" ? "running" : "running");
+
+  const [activeAgent, setActiveAgent] = React.useState<string>("orchestrator");
   const [reviewIteration, setReviewIteration] = React.useState(1);
-  const [elapsedSeconds, setElapsedSeconds] = React.useState(34);
+  const [elapsedSeconds, setElapsedSeconds] = React.useState(0);
   const [isApprovalOpen, setIsApprovalOpen] = React.useState(false);
   const [agentError, setAgentError] = React.useState<string | null>(null);
 
-  const queryText = queryParam || "Empirical memory scaling and recall tradeoffs between HNSW and IVFFlat in pgvector on PostgreSQL 16";
-
-  const [planSteps, setPlanSteps] = React.useState<PlanStep[]>([
-    {
-      id: "step-1",
-      label: "Hypothesis Decomposition",
-      agent: "Orchestrator",
-      status: "completed",
-      duration: "0.4s",
-      details: "Formulated 3 research verification vectors: index footprint, latency, and shared buffer contention.",
-    },
-    {
-      id: "step-2",
-      label: "SearXNG & Vector Ingestion",
-      agent: "Research",
-      status: "completed",
-      duration: "1.6s",
-      details: "Ingested 14 sources; filtered 4 duplicates; verified 6 academic preprints.",
-    },
-    {
-      id: "step-3",
-      label: "Contradiction Cross-Check",
-      agent: "Analysis",
-      status: "completed",
-      duration: "0.9s",
-      details: "Resolved build memory discrepancy between pgvector 0.5.0 halfvec and pgvector 0.7.0 benchmarks.",
-    },
-    {
-      id: "step-4",
-      label: "Report Draft Synthesis",
-      agent: "Writer",
-      status: "completed",
-      duration: "1.4s",
-      details: "Compiled executive summary, architecture comparison tables, and benchmark graphs.",
-    },
-    {
-      id: "step-5",
-      label: "Adversarial Citation Audit",
-      agent: "Reviewer",
-      status: "running",
-      duration: "0.5s",
-      details: "Checking citation offsets against ingested PDFs. 1 unverified deduction flagged for user signoff.",
-    },
-  ]);
+  const [planSteps, setPlanSteps] = React.useState<PlanStep[]>(DEFAULT_PLAN_STEPS);
+  const [nodeStates, setNodeStates] = React.useState<Record<string, Partial<AgentNodeRuntimeState>>>({});
+  const [streamEvents, setStreamEvents] = React.useState<StreamEvent[]>([]);
+  const [sources, setSources] = React.useState<SourceCardData[]>([]);
 
   // Elapsed time counter
   React.useEffect(() => {
@@ -110,76 +115,212 @@ export default function ResearchWorkspacePage() {
     return () => clearInterval(interval);
   }, [sessionStatus]);
 
-  // Live SSE connection when stream=true
+  // Load existing session details & sources from API
   React.useEffect(() => {
     if (!sessionId || sessionId.startsWith("sess_")) return;
 
     researchApi
       .getSession(sessionId)
       .then((detail) => {
-        if (detail.report) {
+        if (detail.initial_query) {
+          setQueryText(detail.initial_query);
+        }
+        if (detail.report || detail.status === "COMPLETED") {
           setSessionStatus("completed");
+          setActiveAgent("final_report");
+          setPlanSteps((prev) => prev.map((s) => ({ ...s, status: "completed" })));
+        } else if (detail.status === "WAITING_FOR_APPROVAL") {
+          setSessionStatus("awaiting_approval");
+          setIsApprovalOpen(true);
         }
       })
       .catch(() => {});
 
-    if (searchParams.get("stream") === "true") {
-      setSessionStatus("running");
-      const streamUrl = researchApi.getStreamUrl(sessionId);
-      const eventSource = new EventSource(streamUrl);
+    researchApi
+      .getSources(sessionId)
+      .then((rawSources) => {
+        if (rawSources && rawSources.length > 0) {
+          setSources(
+            rawSources.map((s, idx) => ({
+              id: s.id,
+              index: idx + 1,
+              title: s.title || "Untitled Source",
+              url: s.url,
+              domain: s.domain || (s.url ? new URL(s.url).hostname : "web"),
+              excerpt: s.raw_content ? s.raw_content.slice(0, 240) + "..." : s.title,
+              credibilityScore: 0.95,
+              deduped: false,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+  }, [sessionId]);
 
-      eventSource.addEventListener("node_update", (e) => {
-        try {
-          const payload = JSON.parse(e.data);
-          setActiveAgent(payload.node);
-          if (payload.plan && payload.plan.length > 0) {
-            setPlanSteps(
-              payload.plan.map((p: { step: number; description: string }, idx: number) => ({
-                id: `step-${idx + 1}`,
-                label: p.description?.substring(0, 30) || `Investigation Step ${idx + 1}`,
-                agent: payload.node === "orchestrator" ? "Orchestrator" : "Research",
-                status: "running",
-                details: p.description || "",
+  // Live SSE connection when stream=true or when session is running
+  React.useEffect(() => {
+    if (!sessionId || sessionId.startsWith("sess_")) return;
+
+    const streamUrl = researchApi.getStreamUrl(sessionId);
+    const eventSource = new EventSource(streamUrl);
+
+    eventSource.addEventListener("connected", () => {
+      setStreamEvents((prev) => [
+        ...prev,
+        {
+          id: `evt-conn-${Date.now()}`,
+          timestamp: new Date().toLocaleTimeString(),
+          agent: "system",
+          type: "status",
+          message: `Connected to LangGraph streaming orchestrator (session: ${sessionId.slice(0, 8)})`,
+        },
+      ]);
+    });
+
+    eventSource.addEventListener("node_update", (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        const node = payload.node as string;
+        setActiveAgent(node);
+
+        const durMs = payload.timings?.[node];
+        const durStr = durMs ? (durMs / 1000).toFixed(1) + "s" : undefined;
+
+        // Build descriptive agent stream event
+        let messageText = `Agent '${node.toUpperCase()}' updated execution state.`;
+        if (node === "orchestrator") {
+          const stepCount = payload.plan?.length || 3;
+          const queryCount = payload.sub_queries?.length || 2;
+          messageText = `Orchestrator decomposed inquiry into ${stepCount} investigation steps and ${queryCount} research vectors.`;
+        } else if (node === "researcher") {
+          const count = payload.sources_count ?? payload.sources?.length ?? 0;
+          messageText = `Researcher retrieved ${count} verified academic and web sources.`;
+        } else if (node === "analyst") {
+          messageText = `Analyst completed evidence cross-examination and contradiction resolution.`;
+        } else if (node === "writer") {
+          messageText = `Writer synthesized report draft.`;
+        } else if (node === "reviewer") {
+          const passed = payload.review_feedback?.passed;
+          messageText = `Citation auditor evaluation: ${passed ? "Passed citation grounding audit" : "Flagged unsupported deductions for revision"}.`;
+        } else if (node === "final_report") {
+          messageText = `Final report compiled and markdown persisted.`;
+        }
+
+        const newEvent: StreamEvent = {
+          id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          timestamp: new Date().toLocaleTimeString(),
+          agent:
+            node === "orchestrator" || node === "researcher" || node === "analyst" || node === "writer" || node === "reviewer"
+              ? (node === "researcher" ? "research" : node === "analyst" ? "analysis" : node)
+              : "system",
+          type: node === "researcher" ? "tool" : node === "reviewer" ? "status" : "thought",
+          message: messageText,
+          metadata: {
+            durationMs: durMs ? Math.round(durMs) : undefined,
+            rawPayload: payload,
+          },
+        };
+
+        setStreamEvents((prev) => [...prev, newEvent]);
+
+        // Update node runtime telemetry
+        setNodeStates((prev) => ({
+          ...prev,
+          [node]: {
+            ...prev[node],
+            status: "completed",
+            duration: durStr || prev[node]?.duration,
+          },
+        }));
+
+        // Dynamic plan step updates
+        if (payload.plan && payload.plan.length > 0) {
+          setPlanSteps(
+            payload.plan.map((p: { step: number; description: string }, idx: number) => ({
+              id: `step-${idx + 1}`,
+              label: p.description?.substring(0, 36) || `Investigation Step ${idx + 1}`,
+              agent: idx === 0 ? "Orchestrator" : idx === 1 ? "Research" : idx === 2 ? "Analysis" : idx === 3 ? "Writer" : "Reviewer",
+              status: idx === 0 ? "completed" : "running",
+              details: p.description || "",
+            }))
+          );
+        }
+
+        // Live sources ingestion
+        if (payload.sources && Array.isArray(payload.sources) && payload.sources.length > 0) {
+          setSources(
+            payload.sources.map((s: { title?: string; url?: string; domain?: string; snippet?: string }, idx: number) => ({
+              id: `src-${idx + 1}`,
+              index: idx + 1,
+              title: s.title || "Untitled Source",
+              url: s.url,
+              domain: s.domain || (s.url ? new URL(s.url).hostname : "web"),
+              excerpt: s.snippet ? s.snippet.slice(0, 240) + "..." : s.title || "",
+              credibilityScore: 0.95,
+              deduped: false,
+            }))
+          );
+        }
+      } catch {}
+    });
+
+    eventSource.addEventListener("interrupt", (e) => {
+      try {
+        const payload = JSON.parse((e as MessageEvent).data);
+        if (payload.plan && payload.plan.length > 0) {
+          setPlanSteps(
+            payload.plan.map((p: { step: number; description: string }, idx: number) => ({
+              id: `step-${idx + 1}`,
+              label: p.description?.substring(0, 36) || `Investigation Step ${idx + 1}`,
+              agent: "Orchestrator",
+              status: "running",
+              details: p.description || "",
+            }))
+          );
+        }
+      } catch {}
+      setSessionStatus("awaiting_approval");
+      setIsApprovalOpen(true);
+    });
+
+    eventSource.addEventListener("workflow_complete", () => {
+      setSessionStatus("completed");
+      setActiveAgent("final_report");
+      setPlanSteps((prev) => prev.map((s) => ({ ...s, status: "completed" })));
+
+      // Reload real persisted sources
+      researchApi
+        .getSources(sessionId)
+        .then((raw) => {
+          if (raw && raw.length > 0) {
+            setSources(
+              raw.map((s, idx) => ({
+                id: s.id,
+                index: idx + 1,
+                title: s.title || "Untitled Source",
+                url: s.url,
+                domain: s.domain || (s.url ? new URL(s.url).hostname : "web"),
+                excerpt: s.raw_content ? s.raw_content.slice(0, 240) + "..." : s.title,
+                credibilityScore: 0.95,
+                deduped: false,
               }))
             );
           }
-        } catch {}
-      });
+        })
+        .catch(() => {});
 
-      eventSource.addEventListener("interrupt", (e) => {
-        try {
-          const payload = JSON.parse((e as MessageEvent).data);
-          if (payload.plan && payload.plan.length > 0) {
-            setPlanSteps(
-              payload.plan.map((p: { step: number; description: string }, idx: number) => ({
-                id: `step-${idx + 1}`,
-                label: p.description?.substring(0, 30) || `Investigation Step ${idx + 1}`,
-                agent: "Orchestrator",
-                status: "running",
-                details: p.description || "",
-              }))
-            );
-          }
-        } catch {}
-        setSessionStatus("awaiting_approval");
-        setIsApprovalOpen(true);
-      });
+      eventSource.close();
+      toast.success("Research pipeline complete! Report is ready.");
+    });
 
-      eventSource.addEventListener("workflow_complete", () => {
-        setSessionStatus("completed");
-        eventSource.close();
-        toast.success("Research pipeline complete! Report is ready.");
-      });
+    eventSource.addEventListener("error", () => {
+      eventSource.close();
+    });
 
-      eventSource.addEventListener("error", () => {
-        eventSource.close();
-      });
-
-      return () => {
-        eventSource.close();
-      };
-    }
-  }, [sessionId, searchParams]);
+    return () => {
+      eventSource.close();
+    };
+  }, [sessionId]);
 
   const formatTimer = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -194,9 +335,8 @@ export default function ResearchWorkspacePage() {
         await researchApi.resumeSession(sessionId, true, "Approved by user");
       }
       setSessionStatus("completed");
-      setPlanSteps((steps) =>
-        steps.map((s) => (s.id === "step-5" ? { ...s, status: "completed", duration: "0.8s" } : s))
-      );
+      setActiveAgent("final_report");
+      setPlanSteps((steps) => steps.map((s) => ({ ...s, status: "completed" })));
       toast.success("Verification approved. Full research report compiled!");
     } catch {
       setSessionStatus("completed");
@@ -223,9 +363,9 @@ export default function ResearchWorkspacePage() {
       setSessionStatus("running");
       toast.success("Agent recovered and pipeline resumed.");
     } else {
-      setAgentError("Analysis agent: SearXNG container socket timeout on search retry #2");
+      setAgentError("Analysis agent: Socket timeout on evidence retrieval retry #2");
       setSessionStatus("error");
-      toast.error("Simulated failure injected into Analysis agent node.");
+      toast.error("Simulated fault injected into Analysis agent node.");
     }
   };
 
@@ -324,7 +464,7 @@ export default function ResearchWorkspacePage() {
             activeTab === "plan" ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
           )}
         >
-          Plan (5)
+          Plan ({planSteps.length})
         </button>
         <button
           onClick={() => setActiveTab("sources")}
@@ -333,7 +473,7 @@ export default function ResearchWorkspacePage() {
             activeTab === "sources" ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
           )}
         >
-          Sources ({SAMPLE_SOURCES.length})
+          Sources ({sources.length})
         </button>
       </div>
 
@@ -373,11 +513,11 @@ export default function ResearchWorkspacePage() {
                   <Cpu className="h-3.5 w-3.5 text-primary" />
                   Inference Device
                 </span>
-                <span className="text-foreground font-semibold">NVIDIA RTX 5060</span>
+                <span className="text-foreground font-semibold">NVIDIA RTX 5060 (8GB)</span>
               </div>
               <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                 <span>Model Target</span>
-                <span className="text-foreground">qwen3:8b (5.2GB)</span>
+                <span className="text-foreground font-semibold">qwen2.5:3b (1.9GB)</span>
               </div>
               <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                 <span>Semaphore Lock</span>
@@ -393,7 +533,7 @@ export default function ResearchWorkspacePage() {
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
-                  Execution Plan (5 Steps)
+                  Execution Plan ({planSteps.length} Steps)
                 </h4>
                 <span className="font-mono text-[10px] text-muted-foreground">
                   Loop: {reviewIteration}/3
@@ -466,7 +606,7 @@ export default function ResearchWorkspacePage() {
                     Human-in-the-Loop Gate Paused Synthesis
                   </h4>
                   <p className="text-[11px] text-muted-foreground">
-                    Reviewer detected 1 unverified deduction in Section 3. Confirm to proceed or reject to iterate.
+                    Reviewer detected unverified deduction. Confirm to proceed or reject to iterate.
                   </p>
                 </div>
               </div>
@@ -528,6 +668,8 @@ export default function ResearchWorkspacePage() {
               <AgentGraph
                 activeStep={activeAgent}
                 reviewIteration={reviewIteration}
+                maxIterations={3}
+                nodeStates={nodeStates}
                 onNodeClick={(id) => {
                   setActiveAgent(id);
                   toast.info(`Inspecting telemetry for agent: ${id.toUpperCase()}`);
@@ -538,7 +680,10 @@ export default function ResearchWorkspacePage() {
 
           {/* Terminal-style Real-time Streaming Feed */}
           <div className="flex-1 min-h-[300px]">
-            <StreamingFeed isStreaming={sessionStatus === "running" || sessionStatus === "awaiting_approval"} />
+            <StreamingFeed
+              events={streamEvents}
+              isStreaming={sessionStatus === "running" || sessionStatus === "awaiting_approval"}
+            />
           </div>
         </main>
 
@@ -552,7 +697,7 @@ export default function ResearchWorkspacePage() {
             activeTab !== "sources" && "hidden lg:flex"
           )}
         >
-          <SourcesDrawer sources={SAMPLE_SOURCES} />
+          <SourcesDrawer sources={sources} />
         </aside>
       </div>
 
@@ -563,10 +708,9 @@ export default function ResearchWorkspacePage() {
         onApprove={handleApprove}
         onReject={handleReject}
         flaggedClaim={{
-          section: "Section 3: Empirical Index Overhead & Sizing",
-          claimText: "IVFFlat recall degrades exponentially when dataset exceeds maintenance_work_mem by more than 4x.",
-          reason: "Claim lacks a primary benchmark citation or mathematical proof in the ingested 14 sources. It appears to be an inferred generalization.",
-          sourceSuggestion: "Zhang & Mehta (2024) tested up to 2x maintenance_work_mem only.",
+          section: "Investigation Methodology Plan",
+          claimText: queryText,
+          reason: "Human review gate configured for research vector confirmation.",
           iteration: reviewIteration,
           maxIterations: 3,
         }}

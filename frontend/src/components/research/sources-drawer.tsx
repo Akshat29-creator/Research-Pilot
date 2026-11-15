@@ -106,7 +106,7 @@ export interface SourcesDrawerProps {
 }
 
 export function SourcesDrawer({
-  sources = SAMPLE_SOURCES,
+  sources = [],
   className,
 }: SourcesDrawerProps) {
   const [activeTab, setActiveTab] = React.useState<"all" | "academic" | "web" | "deduped">("all");
@@ -237,8 +237,9 @@ export function SourcesDrawer({
       {/* Sources List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
         {filteredSources.length === 0 ? (
-          <div className="py-12 text-center text-xs text-muted-foreground">
-            No sources match your filter.
+          <div className="py-12 text-center text-xs text-muted-foreground flex flex-col items-center gap-1.5">
+            <span className="font-semibold text-foreground/80">No sources ingested yet</span>
+            <span>The Research agent will populate verified sources upon query execution.</span>
           </div>
         ) : (
           filteredSources.map((source) => (

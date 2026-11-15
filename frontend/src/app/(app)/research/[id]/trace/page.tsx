@@ -36,18 +36,40 @@ import {
 } from "@/components/ui/dialog";
 import { CodeBlock } from "@/components/ui/code-block";
 import { toast } from "sonner";
+import { researchApi } from "@/lib/api";
+import { TraceExecution } from "@/components/trace/trace-data";
 
 export default function AgentTracePage() {
   const params = useParams();
   const sessionId = (params?.id as string) || "sess_01JBM8";
 
-  const [trace] = React.useState(SAMPLE_TRACE);
+  const [trace, setTrace] = React.useState<TraceExecution>(SAMPLE_TRACE);
   const [selectedSpan, setSelectedSpan] = React.useState<TraceSpan | null>(SAMPLE_TRACE.spans[0]);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [agentFilter, setAgentFilter] = React.useState<string>("all");
   const [kindFilter, setKindFilter] = React.useState<"all" | "agent" | "tool">("all");
   const [isJsonModalOpen, setIsJsonModalOpen] = React.useState(false);
   const [copiedExecId, setCopiedExecId] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!sessionId || sessionId.startsWith("sess_")) return;
+
+    researchApi
+      .getSession(sessionId)
+      .then((detail) => {
+        if (detail) {
+          setTrace((prev) => ({
+            ...prev,
+            sessionId: detail.id,
+            executionId: `exec_${detail.id.replace(/-/g, "").slice(0, 16)}`,
+            query: detail.initial_query || detail.title || prev.query,
+            startTime: detail.created_at || prev.startTime,
+            endTime: detail.updated_at || prev.endTime,
+          }));
+        }
+      })
+      .catch(() => {});
+  }, [sessionId]);
 
   // Filter spans
   const filteredSpans = React.useMemo(() => {

@@ -34,6 +34,7 @@ class SourceResponse(BaseModel):
     url: str
     domain: str
     status: str
+    raw_content: str | None = None
     retrieved_at: datetime
 
 

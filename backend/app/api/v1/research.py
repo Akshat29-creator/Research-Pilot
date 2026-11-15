@@ -466,7 +466,35 @@ async def stream_research_session(
                         event_payload["plan"] = node_update.get("plan", [])
                         event_payload["sub_queries"] = node_update.get("sub_queries", [])
                     elif node_name == "researcher":
-                        event_payload["sources_count"] = len(node_update.get("sources", []))
+                        sources_list = node_update.get("sources", [])
+                        event_payload["sources_count"] = len(sources_list)
+                        event_payload["sources"] = [
+                            {
+                                "title": s.get("title", ""),
+                                "url": s.get("url", ""),
+                                "domain": s.get("domain", ""),
+                                "snippet": s.get("content_snippet", "") or s.get("title", ""),
+                                "status": s.get("fetch_status", "SUCCESS"),
+                            }
+                            for s in sources_list
+                        ]
+
+                        # Persist sources to database
+                        if sources_list:
+                            async with async_session_factory() as db:
+                                for s in sources_list:
+                                    src = Source(
+                                        id=uuid.uuid4(),
+                                        session_id=session_id,
+                                        title=s.get("title", "Untitled Source")[:500],
+                                        url=s.get("url", "")[:2048],
+                                        domain=s.get("domain", "")[:255],
+                                        content_hash=s.get("content_hash", "")[:64],
+                                        raw_content=s.get("content_snippet", "") or s.get("title", ""),
+                                        status="SUCCESS" if s.get("fetch_status") in ("FETCHED_FULL", "SNIPPET_ONLY") else "FAILED",
+                                    )
+                                    db.add(src)
+                                await db.commit()
                     elif node_name == "analyst":
                         event_payload["analysis"] = node_update.get("analysis")
                     elif node_name == "writer":
