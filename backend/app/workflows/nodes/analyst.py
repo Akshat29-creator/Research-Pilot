@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
+from app.core.telemetry import AGENT_NODE_DURATION, timed_agent_node
 from app.integrations.llm.factory import get_llm_provider
 from app.tools.isolation import (
     get_isolation_system_directive,
@@ -33,6 +34,7 @@ class AnalysisSchema(BaseModel):
     unresolved_questions: List[str] = Field(description="Areas requiring future empirical testing.")
 
 
+@timed_agent_node("analyst")
 async def analyst_node(state: ResearchWorkflowState) -> Dict[str, Any]:
     """Analyst node: cross-references gathered evidence under prompt injection isolation."""
     start_time = time.perf_counter()
@@ -94,6 +96,7 @@ async def analyst_node(state: ResearchWorkflowState) -> Dict[str, Any]:
             }
 
     elapsed = (time.perf_counter() - start_time) * 1000
+    AGENT_NODE_DURATION.labels(node_name="analyst").observe(elapsed / 1000.0)
     timings = dict(state.get("timings", {}))
     timings["analyst"] = elapsed
 

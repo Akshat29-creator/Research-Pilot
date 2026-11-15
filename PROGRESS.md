@@ -407,6 +407,37 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Next.js production build: **14 / 14 routes compiled successfully**.
     - Both FastAPI backend (`http://127.0.0.1:8000`) and Next.js standalone frontend (`http://localhost:3000`) verified healthy and live.
 
+### Phase 8: Evaluation & Observability (Completed)
+- **Status**: `COMPLETED`
+- **Timestamp**: 2026-11-15
+- **What Was Done**:
+  - **OpenTelemetry Distributed Tracing (`backend/app/core/telemetry/otel.py`)**:
+    - Initialized global OpenTelemetry TracerProvider with `SafeConsoleExporter` guarding test stdout teardown.
+    - Automated FastAPI route instrumentation via `FastAPIInstrumentor`.
+    - Implemented `@timed_agent_node(node_name)` decorator wrapping all 6 LangGraph agent nodes with span contexts and Prometheus timing observations.
+  - **Prometheus Metrics Engine (`backend/app/core/telemetry/metrics.py`)**:
+    - Configured histograms (`research_workflow_duration_seconds`, `agent_node_duration_seconds`, `reviewer_grounding_score`).
+    - Configured counters (`llm_token_count_total`, `reviewer_verdict_total`).
+    - Configured gauges (`active_research_jobs`, `gpu_vram_used_bytes`, `concurrency_waiting_gauge`).
+    - Mounted `/metrics` scrape endpoint in FastAPI (`app/main.py`).
+  - **Grafana Dashboards as Code (`infrastructure/observability/`)**:
+    - Prometheus scraper config polling backend every 5s (`prometheus.yml`).
+    - Zero-click Grafana provisioning configuration (`grafana/provisioning/`).
+    - Three production Grafana dashboards:
+      - `workflow_overview.json`: Latency percentiles (p50, p95, p99), node durations, active queue size.
+      - `llm_performance.json`: RTX 5060 GPU VRAM gauge, concurrency queue depth, token velocity.
+      - `agent_reliability.json`: Reviewer grounding score distribution, verdict ratios, retry counts.
+    - Standalone observability stack Compose definition (`docker-compose.observability.yml`).
+  - **Empirical Benchmarking Harness (`backend/eval/`)**:
+    - Curated 25-item benchmark dataset (`eval/datasets/benchmark_queries.json`) covering 5 categories (Standard Factual, Contradictory Sources, Negative Cases, Adversarial Payloads, Temporal Recency).
+    - Built evaluation runner (`eval/run_eval.py`) with latency percentiles, average grounding, reviewer pass rate, and adversarial injection safety validation.
+    - JSON reports auto-exported to `backend/eval/reports/`.
+  - **Comprehensive Documentation**:
+    - Authored `docs/EVALUATION.md` documenting telemetry architecture, metrics catalogue, Grafana setup, and evaluation dataset taxonomy.
+  - **Testing**:
+    - 5 unit tests in `test_telemetry.py` and 4 unit tests in `test_evaluation_harness.py`.
+    - Total test suite: **129 / 129 tests passed**. Live evaluation benchmark executed and verified against local Ollama.
+
 ---
 
 ## Roadmap & Next Phases
@@ -423,7 +454,7 @@ This document tracks all project milestones, completed tasks, implemented featur
 | **Phase 5B**| Hybrid Search and Reranking (tsvector + pgvector via RRF) | **COMPLETED** |
 | **Phase 6** | MCP, Approvals, Resilience (Interrupts, Checkpointer Recovery) | **COMPLETED** |
 | **Phase 7** | Frontend Integration & Live Streaming (SSE, Real Backend Wiring) | **COMPLETED** |
-| **Phase 8** | Evaluation and Observability (OpenTelemetry, Prometheus, Grafana) | NEXT UP |
-| **Phase 9** | CI/CD and Production Docker (GitHub Actions, Multi-Stage Builds) | PENDING |
+| **Phase 8** | Evaluation and Observability (OpenTelemetry, Prometheus, Grafana) | **COMPLETED** |
+| **Phase 9** | CI/CD and Production Docker (GitHub Actions, Multi-Stage Builds) | NEXT UP |
 | **Phase 10**| E2E Tests, Load Tests, MCP Server (Playwright, Locust, MCP Tools) | PENDING |
 | **Phase 11**| Final Hardening, Benchmarks and Portfolio Delivery | PENDING |

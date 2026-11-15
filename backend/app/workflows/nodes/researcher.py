@@ -3,6 +3,7 @@ import logging
 import time
 from typing import Any, Dict, List, Set
 
+from app.core.telemetry import AGENT_NODE_DURATION, timed_agent_node
 from app.integrations.search.base import canonicalize_url
 from app.integrations.search.factory import get_search_provider
 from app.tools.ssrf import SSRFSecurityError, safe_fetch_url
@@ -12,6 +13,7 @@ from app.workflows.state import ResearchWorkflowState
 logger = logging.getLogger("researchpilot.workflows.researcher")
 
 
+@timed_agent_node("researcher")
 async def researcher_node(state: ResearchWorkflowState) -> Dict[str, Any]:
     """Researcher node: executes searches, applies SSRF-safe retrieval, and extracts clean text."""
     start_time = time.perf_counter()
@@ -82,6 +84,7 @@ async def researcher_node(state: ResearchWorkflowState) -> Dict[str, Any]:
         )
 
     elapsed = (time.perf_counter() - start_time) * 1000
+    AGENT_NODE_DURATION.labels(node_name="researcher").observe(elapsed / 1000.0)
     timings = dict(state.get("timings", {}))
     timings["researcher"] = elapsed
 

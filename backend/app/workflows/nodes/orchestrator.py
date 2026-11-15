@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
+from app.core.telemetry import AGENT_NODE_DURATION, timed_agent_node
 from app.integrations.llm.factory import get_llm_provider
 from app.workflows.interrupts import gate_approval
 from app.workflows.state import ResearchWorkflowState
@@ -18,6 +19,7 @@ class OrchestratorPlanSchema(BaseModel):
     sub_queries: List[str] = Field(description="2 to 3 targeted search queries.")
 
 
+@timed_agent_node("orchestrator")
 async def orchestrator_node(state: ResearchWorkflowState) -> Dict[str, Any]:
     """Orchestrator node: analyzes topic and generates decomposition plan and search queries."""
     start_time = time.perf_counter()
@@ -49,22 +51,29 @@ async def orchestrator_node(state: ResearchWorkflowState) -> Dict[str, Any]:
         "Formulate a rigorous research plan and targeted search queries."
     )
 
-    try:
-        plan_result = await llm.generate_structured(
-            prompt=user_prompt,
-            response_model=OrchestratorPlanSchema,
-            system=system_prompt,
-        )
-        plan_steps = [
-            {"step": i + 1, "description": s} for i, s in enumerate(plan_result.plan_steps)
-        ]
-        sub_queries = plan_result.sub_queries if plan_result.sub_queries else fallback_sub_queries
-    except Exception as e:
-        logger.warning("LLM planning fallback due to: %s", str(e))
-        plan_steps = fallback_plan
-        sub_queries = fallback_sub_queries
+    # Reuse existing plan if resuming from human-in-the-loop interrupt
+    if state.get("plan") and state.get("sub_queries"):
+        logger.info("Reusing existing plan steps and sub-queries upon workflow resumption.")
+        plan_steps = state["plan"]
+        sub_queries = state["sub_queries"]
+    else:
+        try:
+            plan_result = await llm.generate_structured(
+                prompt=user_prompt,
+                response_model=OrchestratorPlanSchema,
+                system=system_prompt,
+            )
+            plan_steps = [
+                {"step": i + 1, "description": s} for i, s in enumerate(plan_result.plan_steps)
+            ]
+            sub_queries = plan_result.sub_queries if plan_result.sub_queries else fallback_sub_queries
+        except Exception as e:
+            logger.warning("LLM planning fallback due to: %s", str(e))
+            plan_steps = fallback_plan
+            sub_queries = fallback_sub_queries
 
     elapsed = (time.perf_counter() - start_time) * 1000
+    AGENT_NODE_DURATION.labels(node_name="orchestrator").observe(elapsed / 1000.0)
     timings = dict(state.get("timings", {}))
     timings["orchestrator"] = elapsed
 

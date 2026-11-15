@@ -1,0 +1,88 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Hardware & Concurrency Telemetry (Lenovo Legion Pro 5 - RTX 5060)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5368709120 },
+              { "color": "red", "value": 6442450944 }
+            ]
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "id": 2,
+      "title": "GPU VRAM Allocation vs Safe Headroom (6.1 GB)",
+      "type": "gauge",
+      "targets": [
+        {
+          "expr": "gpu_vram_used_bytes",
+          "legendFormat": "{{device}}"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "id": 3,
+      "title": "Inference Concurrency Slot Waiting Queue (Semaphore Lock)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "concurrency_waiting_gauge",
+          "legendFormat": "Queued Waiting Requests"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 9 },
+      "id": 4,
+      "title": "Token Generation Velocity & Cumulative Volume",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(llm_token_count_total[5m])) by (model, type)",
+          "legendFormat": "{{model}} ({{type}})"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["researchpilot", "llm", "hardware", "rtx5060"],
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "ResearchPilot AI — LLM & Hardware Performance",
+  "uid": "researchpilot-llm-performance",
+  "version": 1
+}

@@ -4,6 +4,12 @@ from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
+from app.core.telemetry import (
+    AGENT_NODE_DURATION,
+    REVIEWER_GROUNDING_SCORE,
+    REVIEWER_VERDICT_COUNT,
+    timed_agent_node,
+)
 from app.integrations.llm.factory import get_llm_provider
 from app.workflows.state import ResearchWorkflowState
 
@@ -30,6 +36,7 @@ class ReviewerAuditSchema(BaseModel):
     )
 
 
+@timed_agent_node("reviewer")
 async def reviewer_node(state: ResearchWorkflowState) -> Dict[str, Any]:
     """Reviewer node: adversarial fact-checker auditing report claims against source evidence."""
     start_time = time.perf_counter()
@@ -81,6 +88,12 @@ async def reviewer_node(state: ResearchWorkflowState) -> Dict[str, Any]:
         }
 
     elapsed = (time.perf_counter() - start_time) * 1000
+    AGENT_NODE_DURATION.labels(node_name="reviewer").observe(elapsed / 1000.0)
+    REVIEWER_GROUNDING_SCORE.observe(feedback.get("grounding_score", 0.9))
+    REVIEWER_VERDICT_COUNT.labels(
+        verdict="pass" if feedback.get("passed", True) else "revision"
+    ).inc()
+
     timings = dict(state.get("timings", {}))
     timings["reviewer"] = elapsed
 

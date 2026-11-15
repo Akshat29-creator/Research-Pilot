@@ -2,11 +2,13 @@ import logging
 import time
 from typing import Any, Dict
 
+from app.core.telemetry import AGENT_NODE_DURATION, timed_agent_node
 from app.workflows.state import ResearchWorkflowState
 
 logger = logging.getLogger("researchpilot.workflows.final_report")
 
 
+@timed_agent_node("final_report")
 async def final_report_node(state: ResearchWorkflowState) -> Dict[str, Any]:
     """FinalReport node: finalizes report formatting, badges, and verification metadata."""
     start_time = time.perf_counter()
@@ -40,6 +42,7 @@ async def final_report_node(state: ResearchWorkflowState) -> Dict[str, Any]:
     final_markdown = f"{audit_badge}{draft}"
 
     elapsed = (time.perf_counter() - start_time) * 1000
+    AGENT_NODE_DURATION.labels(node_name="final_report").observe(elapsed / 1000.0)
     timings = dict(state.get("timings", {}))
     timings["final_report"] = elapsed
 

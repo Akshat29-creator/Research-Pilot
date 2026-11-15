@@ -2,12 +2,14 @@ import logging
 import time
 from typing import Any, Dict
 
+from app.core.telemetry import AGENT_NODE_DURATION, timed_agent_node
 from app.integrations.llm.factory import get_llm_provider
 from app.workflows.state import ResearchWorkflowState
 
 logger = logging.getLogger("researchpilot.workflows.writer")
 
 
+@timed_agent_node("writer")
 async def writer_node(state: ResearchWorkflowState) -> Dict[str, Any]:
     """Writer node: drafts or revises an academic-grade markdown research report."""
     start_time = time.perf_counter()
@@ -90,6 +92,7 @@ async def writer_node(state: ResearchWorkflowState) -> Dict[str, Any]:
         markdown_report += f"\n\n## References\n{references_block}\n"
 
     elapsed = (time.perf_counter() - start_time) * 1000
+    AGENT_NODE_DURATION.labels(node_name="writer").observe(elapsed / 1000.0)
     timings = dict(state.get("timings", {}))
     timings["writer"] = elapsed
 

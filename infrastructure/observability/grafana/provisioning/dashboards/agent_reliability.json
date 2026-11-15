@@ -1,0 +1,62 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Adversarial Fact-Checking & Citation Reliability",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "id": 2,
+      "title": "Factual Grounding Score Distribution (Threshold >= 0.85)",
+      "type": "heatmap",
+      "targets": [
+        {
+          "expr": "sum(rate(reviewer_grounding_score_bucket[5m])) by (le)",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "id": 3,
+      "title": "Adversarial Review Verdicts (Pass vs Revision Loop)",
+      "type": "piechart",
+      "targets": [
+        {
+          "expr": "sum(reviewer_verdict_total) by (verdict)",
+          "legendFormat": "{{verdict}}"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["researchpilot", "adversarial", "grounding", "reliability"],
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "ResearchPilot AI — Agent Reliability & Grounding",
+  "uid": "researchpilot-agent-reliability",
+  "version": 1
+}

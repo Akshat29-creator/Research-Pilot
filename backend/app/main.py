@@ -5,6 +5,9 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from app.api.v1 import api_v1_router
 from app.core.config import settings
@@ -14,12 +17,14 @@ from app.core.errors import (
     generic_exception_handler,
 )
 from app.core.logging import setup_logging
+from app.core.telemetry.otel import init_tracer
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # Startup validation
+    # Startup validation & telemetry setup
     setup_logging(settings.LOG_LEVEL)
+    init_tracer()
     # Yield control to the application
     yield
     # Shutdown logic
@@ -64,8 +69,17 @@ def create_application() -> FastAPI:
     app.add_exception_handler(AppException, app_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)
 
+    # Mount Prometheus Scrape Endpoint
+    @app.get("/metrics", tags=["Observability"], include_in_schema=False)
+    async def metrics_endpoint():
+        """Expose Prometheus formatted metrics for operational scrapers."""
+        return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
     # Mount API Routers
     app.include_router(api_v1_router)
+
+    # Instrument FastAPI with OpenTelemetry
+    FastAPIInstrumentor.instrument_app(app)
 
     return app
 
