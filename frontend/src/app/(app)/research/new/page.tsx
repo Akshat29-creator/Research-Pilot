@@ -12,6 +12,7 @@ export default function NewResearchPage() {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [approvalRequired, setApprovalRequired] = React.useState(false);
 
   const samplePrompts = [
     "Empirical memory scaling and recall tradeoffs between HNSW and IVFFlat in pgvector on PostgreSQL 16",
@@ -27,7 +28,7 @@ export default function NewResearchPage() {
     toast.info("Initializing multi-agent graph with RTX 5060 inference lock...");
 
     try {
-      const sess = await researchApi.createSession(query, { approvalRequired: true });
+      const sess = await researchApi.createSession(query, { approvalRequired });
       router.push(`/research/${sess.id}?q=${encodeURIComponent(query)}&stream=true`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Connection failed";
@@ -91,12 +92,25 @@ export default function NewResearchPage() {
           </div>
         </div>
 
+        {/* Human approval toggle */}
+        <div className="pt-2">
+          <label className="flex items-center gap-2 cursor-pointer text-xs text-muted-foreground hover:text-foreground select-none transition-colors">
+            <input
+              type="checkbox"
+              checked={approvalRequired}
+              onChange={(e) => setApprovalRequired(e.target.checked)}
+              className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+            />
+            <span>Pause for human plan approval before execution (Autonomous execution when unchecked)</span>
+          </label>
+        </div>
+
         {/* Footer info & button */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4 border-t border-border">
           <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground font-mono">
             <div className="flex items-center gap-1.5 text-emerald-500">
               <Cpu className="h-3.5 w-3.5" />
-              <span>RTX 5060 (qwen3:8b)</span>
+              <span>RTX 5060 (qwen2.5:3b)</span>
             </div>
             <span>•</span>
             <div className="flex items-center gap-1.5">

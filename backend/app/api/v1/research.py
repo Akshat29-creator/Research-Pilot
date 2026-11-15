@@ -405,6 +405,54 @@ async def stream_research_session(
                     approval_required=approval_req,
                     checkpointer=checkpointer,
                 ):
+                    # Check for LangGraph interrupt event
+                    if node_name == "__interrupt__":
+                        interrupt_item = (
+                            node_update[0]
+                            if isinstance(node_update, (list, tuple)) and len(node_update) > 0
+                            else node_update
+                        )
+                        val = (
+                            getattr(interrupt_item, "value", {})
+                            if hasattr(interrupt_item, "value")
+                            else (interrupt_item if isinstance(interrupt_item, dict) else {})
+                        )
+                        interrupt_payload = val.get("payload", {}) if isinstance(val, dict) else {}
+                        step_name = (
+                            val.get("step_name", "plan_approval")
+                            if isinstance(val, dict)
+                            else "plan_approval"
+                        )
+
+                        async with async_session_factory() as db:
+                            approval = Approval(
+                                id=uuid.uuid4(),
+                                session_id=session_id,
+                                step_name=step_name,
+                                payload=interrupt_payload,
+                                status="PENDING",
+                            )
+                            db.add(approval)
+                            stmt = select(ResearchSession).where(ResearchSession.id == session_id)
+                            res = await db.execute(stmt)
+                            sess = res.scalar_one_or_none()
+                            if sess:
+                                sess.status = "WAITING_FOR_APPROVAL"
+                            await db.commit()
+
+                        event_data = {
+                            "step_name": step_name,
+                            "session_id": str(session_id),
+                            "plan": interrupt_payload.get("plan", []),
+                            "sub_queries": interrupt_payload.get("sub_queries", []),
+                        }
+                        yield f"event: interrupt\ndata: {json.dumps(event_data)}\n\n"
+                        continue
+
+                    # Skip non-dict updates
+                    if not isinstance(node_update, dict):
+                        continue
+
                     # Format standard SSE node update
                     event_payload = {
                         "node": node_name,
@@ -436,36 +484,6 @@ async def stream_research_session(
                         )
 
                     yield f"event: node_update\ndata: {json.dumps(event_payload)}\n\n"
-
-                    # Check if orchestrator triggered an interrupt
-                    if node_name == "orchestrator" and approval_req:
-                        # Persist approval record in PostgreSQL
-                        async with async_session_factory() as db:
-                            approval = Approval(
-                                id=uuid.uuid4(),
-                                session_id=session_id,
-                                step_name="plan_approval",
-                                payload={
-                                    "plan": node_update.get("plan", []),
-                                    "sub_queries": node_update.get("sub_queries", []),
-                                },
-                                status="PENDING",
-                            )
-                            db.add(approval)
-                            # Update session status to WAITING_FOR_APPROVAL
-                            stmt = select(ResearchSession).where(ResearchSession.id == session_id)
-                            res = await db.execute(stmt)
-                            sess = res.scalar_one_or_none()
-                            if sess:
-                                sess.status = "WAITING_FOR_APPROVAL"
-                            await db.commit()
-
-                        interrupt_payload = {
-                            "step_name": "plan_approval",
-                            "session_id": str(session_id),
-                            "plan": node_update.get("plan", []),
-                        }
-                        yield f"event: interrupt\ndata: {json.dumps(interrupt_payload)}\n\n"
 
                     # If final_report node completed, persist to database
                     if node_name == "final_report":

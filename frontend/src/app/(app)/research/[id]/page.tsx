@@ -146,7 +146,21 @@ export default function ResearchWorkspacePage() {
         } catch {}
       });
 
-      eventSource.addEventListener("interrupt", () => {
+      eventSource.addEventListener("interrupt", (e) => {
+        try {
+          const payload = JSON.parse((e as MessageEvent).data);
+          if (payload.plan && payload.plan.length > 0) {
+            setPlanSteps(
+              payload.plan.map((p: { step: number; description: string }, idx: number) => ({
+                id: `step-${idx + 1}`,
+                label: p.description?.substring(0, 30) || `Investigation Step ${idx + 1}`,
+                agent: "Orchestrator",
+                status: "running",
+                details: p.description || "",
+              }))
+            );
+          }
+        } catch {}
         setSessionStatus("awaiting_approval");
         setIsApprovalOpen(true);
       });

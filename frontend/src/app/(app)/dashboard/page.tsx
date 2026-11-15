@@ -137,7 +137,7 @@ function DashboardContent() {
     e.preventDefault();
     if (!researchQuery.trim()) return;
     try {
-      const newSession = await researchApi.createSession(researchQuery.trim(), { approvalRequired: true });
+      const newSession = await researchApi.createSession(researchQuery.trim(), { approvalRequired: false });
       const encoded = encodeURIComponent(researchQuery.trim());
       router.push(`/research/${newSession.id}?q=${encoded}&stream=true`);
     } catch {

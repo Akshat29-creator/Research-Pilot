@@ -41,8 +41,8 @@ def get_postgres_checkpointer() -> Iterator[PostgresSaver]:
 
 
 @asynccontextmanager
-async def get_async_postgres_checkpointer() -> AsyncIterator[AsyncPostgresSaver]:
-    """Async context manager supplying a configured, setup-verified AsyncPostgresSaver."""
+async def get_async_postgres_checkpointer() -> AsyncIterator[BaseCheckpointSaver]:
+    """Async context manager supplying a configured AsyncPostgresSaver with MemorySaver fallback."""
     if sys.platform == "win32":
         try:
             current_policy = asyncio.get_event_loop_policy()
@@ -52,11 +52,31 @@ async def get_async_postgres_checkpointer() -> AsyncIterator[AsyncPostgresSaver]
             logger.debug("Failed setting WindowsSelectorEventLoopPolicy: %s", e)
 
     conn_str = get_postgres_conn_string()
-    logger.info("Connecting to async PostgreSQL checkpointer at %s", conn_str.split("@")[-1])
-
-    async with AsyncPostgresSaver.from_conn_string(conn_str) as checkpointer:
+    checkpointer_cm = None
+    checkpointer = None
+    try:
+        checkpointer_cm = AsyncPostgresSaver.from_conn_string(conn_str)
+        checkpointer = await checkpointer_cm.__aenter__()
         await checkpointer.setup()
-        yield checkpointer
+    except Exception as e:
+        logger.warning(
+            "AsyncPostgresSaver unavailable (%s); using MemorySaver for session checkpointing.",
+            str(e),
+        )
+        if checkpointer_cm is not None:
+            try:
+                await checkpointer_cm.__aexit__(None, None, None)
+            except Exception:
+                pass
+        checkpointer = None
+
+    if checkpointer is not None:
+        try:
+            yield checkpointer
+        finally:
+            await checkpointer_cm.__aexit__(None, None, None)
+    else:
+        yield MemorySaver()
 
 
 def get_checkpointer(use_postgres: bool = False) -> BaseCheckpointSaver:

@@ -1,7 +1,15 @@
+import asyncio
+import sys
 import time
 import uuid
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+
+if sys.platform == "win32":
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except Exception:
+        pass
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
