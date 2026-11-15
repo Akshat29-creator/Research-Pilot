@@ -1,8 +1,10 @@
 import logging
 
 from app.core.config import settings
+from app.integrations.search.arxiv import ArxivSearchProvider
 from app.integrations.search.base import SearchProvider
 from app.integrations.search.brave import BraveSearchProvider
+from app.integrations.search.pubmed import PubMedSearchProvider
 from app.integrations.search.searxng import SearXNGSearchProvider
 from app.integrations.search.tavily import TavilySearchProvider
 
@@ -18,8 +20,12 @@ def get_search_provider(provider_name: str | None = None) -> SearchProvider:
 
     target = (provider_name or settings.SEARCH_PROVIDER or "searxng").lower()
 
-    if target == "tavily" and settings.TAVILY_API_KEY:
-        instance: SearchProvider = TavilySearchProvider()
+    if target == "arxiv":
+        instance: SearchProvider = ArxivSearchProvider()
+    elif target == "pubmed":
+        instance = PubMedSearchProvider()
+    elif target == "tavily" and settings.TAVILY_API_KEY:
+        instance = TavilySearchProvider()
     elif target == "brave" and settings.BRAVE_API_KEY:
         instance = BraveSearchProvider()
     else:

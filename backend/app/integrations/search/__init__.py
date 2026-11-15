@@ -1,3 +1,4 @@
+from app.integrations.search.arxiv import ArxivSearchProvider
 from app.integrations.search.base import (
     SearchProvider,
     SearchResult,
@@ -8,6 +9,7 @@ from app.integrations.search.factory import (
     get_search_provider,
     reset_search_provider,
 )
+from app.integrations.search.pubmed import PubMedSearchProvider
 from app.integrations.search.searxng import SearXNGSearchProvider
 from app.integrations.search.tavily import TavilySearchProvider
 
@@ -18,6 +20,8 @@ __all__ = [
     "SearXNGSearchProvider",
     "TavilySearchProvider",
     "BraveSearchProvider",
+    "ArxivSearchProvider",
+    "PubMedSearchProvider",
     "get_search_provider",
     "reset_search_provider",
 ]

@@ -523,6 +523,26 @@ This document tracks all project milestones, completed tasks, implemented featur
     - Backend: 124 unit tests passed, 13 integration tests passed, Ruff clean, Mypy clean.
     - Frontend: 33 Vitest tests passed, 14 Playwright E2E tests passed, ESLint clean, TypeScript clean.
 
+### Post-v1 Feature Extensions: Academic PDF Export & Academic Connectors (Completed)
+- **Status**: `COMPLETED`
+- **Timestamp**: 2026-11-15
+- **What Was Done**:
+  - **Academic PDF Export Engine (`backend/app/services/pdf_export.py`)**:
+    - Built publication-ready PDF generator conforming to IEEE/ACM formatting standards using ReportLab.
+    - Two-pass `NumberedCanvas` computing total pages, running headers ("ResearchPilot AI — Autonomous Academic Synthesis Report"), and footers with page numbers, hardware badges, and grounding audit statuses.
+    - Markdown-to-Flowables parser supporting headings, callout boxes, code blocks, bullet/numbered lists, inline XML escaping, and zebra-striped tables.
+    - Formatted bibliography and citation references section mapping numbered citations (`[1]`, `[2]`) to source URLs and metadata.
+    - Added API endpoints in `backend/app/api/v1/research.py`: `GET /sessions/{session_id}/export/pdf` and `GET /reports/{report_id}/export/pdf`.
+    - Integrated with Frontend toolbar (`frontend/src/app/(app)/reports/[id]/page.tsx`): added one-click "Academic PDF" download button with spinner and graceful browser print fallback.
+  - **Direct Academic Search Connectors (`backend/app/integrations/search/`)**:
+    - `ArxivSearchProvider` (`arxiv.py`): Direct arXiv query connector querying the official Atom XML feed (`export.arxiv.org/api/query`), extracting paper abstracts, authors, PDF links, DOIs, and categories.
+    - `PubMedSearchProvider` (`pubmed.py`): Direct NCBI Entrez E-utilities connector querying `esearch.fcgi` and `esummary.fcgi` for peer-reviewed medical and life sciences literature.
+    - Updated search factory (`factory.py`) to resolve `"arxiv"` and `"pubmed"` search targets with automatic fallback.
+  - **Verification**:
+    - 135 unit tests passed across the backend (`test_pdf_export.py`, `test_academic_search_providers.py`, and full regression suite).
+    - Live end-to-end HTTP verification of binary PDF streaming (`200 OK`, `application/pdf`, valid `%PDF` signature).
+    - Ruff clean, Mypy clean (84 source files), Next.js production build succeeded, and 33 Vitest tests passed.
+
 ---
 
 ## Roadmap & Milestone Status
@@ -543,3 +563,4 @@ This document tracks all project milestones, completed tasks, implemented featur
 | **Phase 9** | CI/CD and Production Docker (GitHub Actions, Multi-Stage Builds) | **COMPLETED** |
 | **Phase 10**| E2E Tests, Load Tests, MCP Server (Playwright, Locust, MCP Tools) | **COMPLETED** |
 | **Phase 11**| Final Hardening, Benchmarks and Portfolio Delivery | **COMPLETED** |
+| **Post-v1**  | Academic PDF Export & arXiv/PubMed Connectors | **COMPLETED** |

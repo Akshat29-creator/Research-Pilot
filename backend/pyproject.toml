@@ -38,6 +38,7 @@ dependencies = [
     "opentelemetry-sdk>=1.30.0",
     "opentelemetry-instrumentation-fastapi>=0.51b0",
     "prometheus-client>=0.20.0",
+    "reportlab>=4.1.0",
 ]
 
 [project.optional-dependencies]

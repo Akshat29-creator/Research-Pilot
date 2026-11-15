@@ -22,6 +22,7 @@ import {
   Save,
   RotateCcw,
   BookOpen,
+  Loader2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -51,6 +52,7 @@ export default function ReportViewerPage() {
   const [copied, setCopied] = React.useState(false);
   const [saveStatus, setSaveStatus] = React.useState<"saved" | "saving">("saved");
   const [highlightCitationId, setHighlightCitationId] = React.useState<number | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = React.useState(false);
 
   React.useEffect(() => {
     if (!sessionId || sessionId.startsWith("sess_")) return;
@@ -112,6 +114,21 @@ export default function ReportViewerPage() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Report downloaded as Markdown");
+  };
+
+  const handleDownloadAcademicPdf = async () => {
+    try {
+      setIsExportingPdf(true);
+      toast.info("Generating publication-ready Academic PDF...");
+      await researchApi.downloadReportPdf(sessionId);
+      toast.success("Academic PDF downloaded successfully");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "PDF export failed";
+      toast.warning(`${msg}. Opening browser print view as fallback.`);
+      window.print();
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   const handleExportPdf = () => {
@@ -297,16 +314,33 @@ export default function ReportViewerPage() {
               <span className="hidden sm:inline">Export .md</span>
             </Button>
 
-            {/* Print / PDF */}
+            {/* Academic PDF Export */}
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleDownloadAcademicPdf}
+              disabled={isExportingPdf}
+              className="h-8 gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+              title="Download IEEE/ACM publication-ready academic PDF"
+            >
+              {isExportingPdf ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <FileText className="h-3.5 w-3.5" />
+              )}
+              <span>{isExportingPdf ? "Generating PDF..." : "Academic PDF"}</span>
+            </Button>
+
+            {/* Print */}
             <Button
               variant="outline"
               size="sm"
               onClick={handleExportPdf}
               className="h-8 gap-1.5 text-xs"
-              title="Print or Save as PDF"
+              title="Print view or browser print"
             >
               <Printer className="h-3.5 w-3.5" />
-              <span>Print / PDF</span>
+              <span className="hidden sm:inline">Print</span>
             </Button>
           </div>
         </div>
