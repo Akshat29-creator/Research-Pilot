@@ -66,7 +66,9 @@ async def orchestrator_node(state: ResearchWorkflowState) -> Dict[str, Any]:
             plan_steps = [
                 {"step": i + 1, "description": s} for i, s in enumerate(plan_result.plan_steps)
             ]
-            sub_queries = plan_result.sub_queries if plan_result.sub_queries else fallback_sub_queries
+            sub_queries = (
+                plan_result.sub_queries if plan_result.sub_queries else fallback_sub_queries
+            )
         except Exception as e:
             logger.warning("LLM planning fallback due to: %s", str(e))
             plan_steps = fallback_plan

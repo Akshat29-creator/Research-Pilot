@@ -438,6 +438,34 @@ This document tracks all project milestones, completed tasks, implemented featur
     - 5 unit tests in `test_telemetry.py` and 4 unit tests in `test_evaluation_harness.py`.
     - Total test suite: **129 / 129 tests passed**. Live evaluation benchmark executed and verified against local Ollama.
 
+### Phase 9: CI/CD & Production Docker (Completed)
+- **Status**: `COMPLETED`
+- **Timestamp**: 2026-11-15
+- **What Was Done**:
+  - **GitHub Actions CI/CD Pipeline (`.github/workflows/`)**:
+    - `ci.yml`: Automated multi-job workflow:
+      - Backend CI: Python 3.11, PostgreSQL 16 (pgvector) and Redis 7 service containers, Ruff format check, Ruff linting, Mypy type-checking, and full pytest suite.
+      - Frontend CI: Node.js 20, npm install, ESLint validation, Vitest component test suite, and Next.js standalone build.
+    - `docker-build.yml`: Container image compilation verification with Docker Buildx and GitHub Actions layer caching.
+    - `security.yml`: Scheduled and PR vulnerability audits via `pip-audit` and `npm audit`.
+    - `dependabot.yml`: Automated weekly dependency upgrades across GitHub Actions, Python, and npm.
+  - **Hardened Multi-Stage Dockerfiles**:
+    - `backend/Dockerfile`: Two-stage builder/runtime using `python:3.11-slim`, non-root user `appuser` (UID: 1001), layer caching, and native Python healthcheck.
+    - `frontend/Dockerfile`: Four-stage Alpine build using Next.js standalone output tracing, non-root user `nextjs` (UID: 1001), minimal ~120MB image size, and HTTP spider healthcheck.
+    - Added comprehensive exclusion rules in `.dockerignore`, `backend/.dockerignore`, and `frontend/.dockerignore`.
+  - **Docker Compose Production Hardening (`docker-compose.yml`)**:
+    - Integrated service healthchecks across PostgreSQL (`pg_isready`), Redis (`redis-cli ping`), SearXNG (`/healthz`), Backend (`/api/v1/health`), and Frontend (`3000/`).
+    - Configured `extra_hosts` bridge (`host.docker.internal:host-gateway`) for communication with host Ollama daemon.
+  - **Code Quality & Pre-Commit**:
+    - Configured root `.pre-commit-config.yaml` for trailing whitespace, EOF fixing, large file prevention, YAML/JSON validation, and Ruff linting/formatting.
+    - Configured `frontend/.eslintrc.json` and resolved all JSX unescaped entity warnings.
+    - Enhanced `Makefile` with targets: `build`, `ci`, `eval`, `observability`.
+  - **Comprehensive Documentation**:
+    - Authored `docs/DEVOPS.md` covering CI/CD pipelines, container hardening practices, deployment instructions, and local Docker testing.
+  - **Verification**:
+    - Backend: Ruff clean (0 errors), Mypy clean (77 files), Pytest unit suite (112 / 112 passed), fast integration suite (25 / 25 passed).
+    - Frontend: ESLint clean (0 errors), TypeScript clean (`tsc --noEmit`), Vitest suite (33 / 33 passed), Next.js production build (14 / 14 routes compiled).
+
 ---
 
 ## Roadmap & Next Phases
@@ -455,6 +483,6 @@ This document tracks all project milestones, completed tasks, implemented featur
 | **Phase 6** | MCP, Approvals, Resilience (Interrupts, Checkpointer Recovery) | **COMPLETED** |
 | **Phase 7** | Frontend Integration & Live Streaming (SSE, Real Backend Wiring) | **COMPLETED** |
 | **Phase 8** | Evaluation and Observability (OpenTelemetry, Prometheus, Grafana) | **COMPLETED** |
-| **Phase 9** | CI/CD and Production Docker (GitHub Actions, Multi-Stage Builds) | NEXT UP |
-| **Phase 10**| E2E Tests, Load Tests, MCP Server (Playwright, Locust, MCP Tools) | PENDING |
+| **Phase 9** | CI/CD and Production Docker (GitHub Actions, Multi-Stage Builds) | **COMPLETED** |
+| **Phase 10**| E2E Tests, Load Tests, MCP Server (Playwright, Locust, MCP Tools) | NEXT UP |
 | **Phase 11**| Final Hardening, Benchmarks and Portfolio Delivery | PENDING |

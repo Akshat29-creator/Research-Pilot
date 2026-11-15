@@ -23,13 +23,9 @@ def test_split_text_recursive_short_text():
 
 
 def test_split_text_recursive_preserves_paragraphs():
-    p1 = (
-        "Paragraph 1: Hierarchical Navigable Small World (HNSW) graphs offer logarithmic latency."
-    )
+    p1 = "Paragraph 1: Hierarchical Navigable Small World (HNSW) graphs offer logarithmic latency."
     p2 = "Paragraph 2: Inverted File Flat (IVFFlat) partitions vector space into Voronoi cells."
-    p3 = (
-        "Paragraph 3: Empirical evaluations show HNSW achieves superior recall at high throughput."
-    )
+    p3 = "Paragraph 3: Empirical evaluations show HNSW achieves superior recall at high throughput."
     full_text = f"{p1}\n\n{p2}\n\n{p3}"
 
     chunks = split_text_recursive(full_text, chunk_size_chars=120, overlap_chars=30)

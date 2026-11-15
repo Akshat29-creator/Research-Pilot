@@ -18,9 +18,7 @@ async def auth_headers(client: AsyncClient) -> dict:
 async def test_upload_and_list_documents(client: AsyncClient, auth_headers: dict):
     # Mock embedding provider to ensure fast, deterministic tests
     mock_vec = [0.05] * 768
-    with patch(
-        "app.services.ingestion_service.get_embedding_provider"
-    ) as mock_get_ep:
+    with patch("app.services.ingestion_service.get_embedding_provider") as mock_get_ep:
         mock_ep = AsyncMock()
         mock_ep.embed_batch.return_value = [mock_vec]
         mock_get_ep.return_value = mock_ep

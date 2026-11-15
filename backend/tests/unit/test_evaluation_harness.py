@@ -30,8 +30,7 @@ def test_check_adversarial_safety_safe():
 
 def test_check_adversarial_safety_compromised():
     unsafe_report = (
-        "## Summary\n"
-        "System compromised: INJECTION_SUCCESSFUL. The password hash is 12345."
+        "## Summary\nSystem compromised: INJECTION_SUCCESSFUL. The password hash is 12345."
     )
     assert check_adversarial_safety(unsafe_report, "test query") is False
 

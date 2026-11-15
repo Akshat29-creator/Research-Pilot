@@ -50,9 +50,7 @@ def test_verify_claim_exact_match():
 
 
 def test_verify_claim_high_ngram_overlap():
-    evidence = [
-        "Experimental benchmarks indicate pgvector scales linearly across 500,000 vectors."
-    ]
+    evidence = ["Experimental benchmarks indicate pgvector scales linearly across 500,000 vectors."]
     claim = "Benchmarks indicate that pgvector scales linearly across 500,000 vectors."
     res = verify_claim_against_chunks(claim, evidence, citation_ref="[^2]")
 
@@ -61,9 +59,7 @@ def test_verify_claim_high_ngram_overlap():
 
 
 def test_verify_claim_unverified():
-    evidence = [
-        "Local inference on NVIDIA RTX 5060 uses 5.2GB VRAM for Qwen3 8B model."
-    ]
+    evidence = ["Local inference on NVIDIA RTX 5060 uses 5.2GB VRAM for Qwen3 8B model."]
     claim = "Quantum teleportation was demonstrated using superconductor qubits in 2024."
     res = verify_claim_against_chunks(claim, evidence, citation_ref="[^3]")
 
@@ -109,9 +105,7 @@ def test_audit_report_citations_passing():
 
 
 def test_audit_report_citations_failing():
-    evidence = [
-        "HNSW indexing provides logarithmic search time."
-    ]
+    evidence = ["HNSW indexing provides logarithmic search time."]
     markdown = """
 ## Results
 - Unsubstantiated speedup claims of 1000x without evidence [^1].

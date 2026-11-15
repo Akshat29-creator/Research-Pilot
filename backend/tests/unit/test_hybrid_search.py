@@ -151,14 +151,17 @@ async def test_hybrid_search_orchestration():
         )
     ]
 
-    with patch(
-        "app.services.hybrid_search_service.semantic_search",
-        new_callable=AsyncMock,
-        return_value=mock_vec,
-    ), patch(
-        "app.services.hybrid_search_service.full_text_search",
-        new_callable=AsyncMock,
-        return_value=mock_text,
+    with (
+        patch(
+            "app.services.hybrid_search_service.semantic_search",
+            new_callable=AsyncMock,
+            return_value=mock_vec,
+        ),
+        patch(
+            "app.services.hybrid_search_service.full_text_search",
+            new_callable=AsyncMock,
+            return_value=mock_text,
+        ),
     ):
         results = await hybrid_search(
             db=mock_db,

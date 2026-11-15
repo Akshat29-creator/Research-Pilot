@@ -103,7 +103,7 @@ export function ApprovalModal({
               <span>Flagged Claim Under Review</span>
             </div>
             <p className="text-xs text-foreground font-serif italic border-l-2 border-amber-500 pl-3 py-0.5">
-              "{flaggedClaim.claimText}"
+              &quot;{flaggedClaim.claimText}&quot;
             </p>
           </div>
 

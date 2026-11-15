@@ -1,4 +1,4 @@
-.PHONY: up down migrate test lint dev clean
+.PHONY: up down migrate test lint dev clean build ci eval observability
 
 # Bring up complete Docker Compose infrastructure
 up:
@@ -14,14 +14,31 @@ migrate:
 
 # Run full test suite across backend and frontend
 test:
-	cd backend && pytest -v tests/
+	cd backend && pytest -v tests/unit/
 	cd frontend && npm test -- --run
 
 # Run code linters and type checkers
 lint:
-	cd backend && ruff check app/ tests/
+	cd backend && ruff check app/ eval/ tests/
+	cd backend && ruff format --check app/ eval/ tests/
 	cd backend && mypy app/
 	cd frontend && npm run lint
+
+# Build production container images
+build:
+	docker compose build
+
+# Run end-to-end local CI validation
+ci: lint test
+	cd frontend && npm run build
+
+# Run automated evaluation benchmark suite
+eval:
+	cd backend && python -m eval.run_eval --limit 2 --mock-search
+
+# Launch Prometheus & Grafana observability stack
+observability:
+	docker compose -f infrastructure/observability/docker-compose.observability.yml up -d
 
 # Start local development servers
 dev:

@@ -104,7 +104,7 @@ export function ReviewerVerdictCard({
               <span>Human-in-the-Loop Signoff (Loop 1)</span>
             </div>
             <p className="text-muted-foreground text-[11px] leading-relaxed">
-              Assertion: "IVFFlat recall degrades exponentially when dataset exceeds maintenance_work_mem by more than 4x" approved by operator <code>pilot@researchpilot.com</code> as sound domain deduction based on inverted list page spilling behavior.
+              Assertion: &quot;IVFFlat recall degrades exponentially when dataset exceeds maintenance_work_mem by more than 4x&quot; approved by operator <code>pilot@researchpilot.com</code> as sound domain deduction based on inverted list page spilling behavior.
             </p>
           </div>
         </div>

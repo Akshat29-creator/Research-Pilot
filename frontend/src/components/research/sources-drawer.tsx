@@ -290,7 +290,7 @@ export function SourcesDrawer({
                     </button>
                   </div>
                   <p className="text-xs leading-relaxed text-foreground/90 font-serif italic border-l-2 border-primary pl-3">
-                    "{selectedSource.excerpt}"
+                    &quot;{selectedSource.excerpt}&quot;
                   </p>
                 </div>
 

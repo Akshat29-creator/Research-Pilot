@@ -33,9 +33,7 @@ def test_gate_approval_approved(monkeypatch):
 
 
 def test_gate_approval_rejected(monkeypatch):
-    mock_interrupt = MagicMock(
-        return_value={"approved": False, "feedback": "Narrow scope to Rust"}
-    )
+    mock_interrupt = MagicMock(return_value={"approved": False, "feedback": "Narrow scope to Rust"})
     monkeypatch.setattr("app.workflows.interrupts.interrupt", mock_interrupt)
 
     state = create_initial_state(query="test query", approval_required=True)

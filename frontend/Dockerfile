@@ -5,8 +5,8 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install
+COPY package.json package-lock.json* ./
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -38,5 +38,8 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+
+HEALTHCHECK --interval=15s --timeout=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1
 
 CMD ["node", "server.js"]

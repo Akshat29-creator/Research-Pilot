@@ -75,3 +75,5 @@ Thumbs.db
 
 # Observability data dumps / scratch
 infrastructure/observability/data/
+*.tsbuildinfo
+
